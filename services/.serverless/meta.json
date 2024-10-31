@@ -5,6 +5,617 @@
     "isWithinCompose": false,
     "isCompose": false,
     "composeOrgName": null,
+    "composeResolverProviders": {
+      "default-aws-credential-resolver": "<REDACTED>",
+      "file": {
+        "instance": {
+          "credentials": "<REDACTED>",
+          "serviceConfigFile": {
+            "service": "serverless-template",
+            "frameworkVersion": "4",
+            "provider": {
+              "name": "aws",
+              "runtime": "provided.al2023",
+              "region": "us-east-1",
+              "environment": {
+                "STAGE": "local",
+                "AWS_ACCESS_KEY_ID": "<REDACTED>",
+                "AWS_SECRET_ACCESS_KEY": "<REDACTED>",
+                "SERVERLESS_LICENSE_KEY": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWJzY3JpcHRpb25JZCI6IjZhMzRmZWFlLWExZTEtNGUxMi04OTYwLWI5YWQ1Njg4Y2Y3NCIsIm9yZ0lkIjoiYzY1NTI0ZGEtYWE4Yi00ZDI5LWFiYzktODRhMWY5ZWNkODBkIiwiaWF0IjoxNzMwMzEwNDkwLCJleHAiOjE3NjE4NDY0OTAsImlzcyI6ImFwcC5zZXJ2ZXJsZXNzLmNvbSJ9.Pz8RuuuPk474F_YGHUTXAfSaZs_L5gSA9v1KNSCQGJKFODsAaK0CjhGJjOq1jJbnoH1doNQfwB1bAzhqO9XlROZpZfszB8c67N0WoAkxRMNZ5S_fSif137JLi60xZ-Q0vRx5Yn3epvQLN8xKx3WLvXzb_AR9oHV5FfgfTqArjQzmDB8TjvlPiwDcNnLRhmb_Q4a_cCz9dW5K5YCcT-oamKp3JsrxSZkV0GMo_YNSTRmplkTrEWP-BQsFiwqciv4lPa7YDfKAU7o5cmnxOKMn6519IhqrkV4iXtqQhTpw0j1Pl5Uofluj4XbzfK6ky4ts4jyGm80DydXrROkHbEvYyg"
+              },
+              "stage": "local",
+              "versionFunctions": true
+            },
+            "package": {
+              "individually": true,
+              "patterns": [
+                "!./**",
+                "./bin/**/*.zip"
+              ],
+              "artifactsS3KeyDirname": "serverless/serverless-template/local/code-artifacts"
+            },
+            "plugins": [
+              "serverless-offline",
+              "serverless-dynamodb"
+            ],
+            "functions": {
+              "getSomething": {
+                "handler": "bootstrap",
+                "package": {
+                  "artifact": "bin/getSomething.zip"
+                },
+                "events": [
+                  {
+                    "http": {
+                      "path": "getSomething",
+                      "method": "get"
+                    }
+                  }
+                ],
+                "role": "serverlessTemplateApiRole",
+                "name": "serverless-template-local-getSomething"
+              },
+              "postSomething": {
+                "handler": "bootstrap",
+                "package": {
+                  "artifact": "bin/postSomething.zip"
+                },
+                "events": [
+                  {
+                    "http": {
+                      "path": "postSomething",
+                      "method": "post"
+                    }
+                  }
+                ],
+                "role": "serverlessTemplateApiRole",
+                "name": "serverless-template-local-postSomething"
+              },
+              "patchSomething": {
+                "handler": "bootstrap",
+                "package": {
+                  "artifact": "bin/patchSomething.zip"
+                },
+                "events": [
+                  {
+                    "http": {
+                      "path": "patchSomething",
+                      "method": "patch"
+                    }
+                  }
+                ],
+                "role": "serverlessTemplateApiRole",
+                "name": "serverless-template-local-patchSomething"
+              },
+              "deleteSomething": {
+                "handler": "bootstrap",
+                "package": {
+                  "artifact": "bin/deleteSomething.zip"
+                },
+                "events": [
+                  {
+                    "http": {
+                      "path": "deleteSomething",
+                      "method": "delete"
+                    }
+                  }
+                ],
+                "role": "serverlessTemplateApiRole",
+                "name": "serverless-template-local-deleteSomething"
+              }
+            },
+            "resources": {
+              "Resources": {
+                "serverlessTemplateUserPool": {
+                  "Type": "AWS::Cognito::UserPool",
+                  "Properties": {
+                    "UserPoolName": "serverlessTemplate-local",
+                    "UsernameAttributes": [
+                      "email"
+                    ],
+                    "Schema": [
+                      {
+                        "Name": "email",
+                        "AttributeDataType": "String",
+                        "Required": true,
+                        "Mutable": true
+                      }
+                    ],
+                    "Policies": {
+                      "PasswordPolicy": "<REDACTED>"
+                    },
+                    "AutoVerifiedAttributes": [
+                      "email"
+                    ],
+                    "EmailConfiguration": {
+                      "EmailSendingAccount": "DEVELOPER",
+                      "SourceArn": "arn:aws:ses:us-east-1:827183242253:identity/marneinnovationcenter.com",
+                      "ReplyToEmailAddress": "admin@marneinnovationcenter.com",
+                      "From": "admin@marneinnovationcenter.com"
+                    },
+                    "VerificationMessageTemplate": {
+                      "DefaultEmailOption": "CONFIRM_WITH_LINK"
+                    }
+                  }
+                },
+                "serverlessTemplateUserPoolClient": {
+                  "Type": "AWS::Cognito::UserPoolClient",
+                  "Properties": {
+                    "ClientName": "serverlessTemplate-local",
+                    "UserPoolId": {
+                      "Ref": "serverlessTemplate"
+                    }
+                  }
+                },
+                "serverlessTemplateLambdaPolicies": {
+                  "Type": "AWS::IAM::Policy",
+                  "Properties": {
+                    "PolicyName": "serverlessTemplateLambdaPolicy-local",
+                    "PolicyDocument": {
+                      "Version": "2012-10-17",
+                      "Statement": [
+                        {
+                          "Effect": "Allow",
+                          "Action": [
+                            "logs:CreateLogGroup",
+                            "logs:CreateLogStream",
+                            "logs:PutLogEvents",
+                            "logs:TagResource",
+                            "logs:PutRetentionPolicy"
+                          ],
+                          "Resource": [
+                            {
+                              "Fn::Join": [
+                                ":",
+                                [
+                                  "arn:aws:logs",
+                                  {
+                                    "Ref": "AWS::Region"
+                                  },
+                                  {
+                                    "Ref": "AWS::AccountId"
+                                  },
+                                  "log-group:/aws/lambda/*:*:*"
+                                ]
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "Effect": "Allow",
+                          "Action": [
+                            "ec2:CreateNetworkInterface",
+                            "ec2:DescribeNetworkInterfaces",
+                            "ec2:DetachNetworkInterface",
+                            "ec2:DeleteNetworkInterface"
+                          ],
+                          "Resource": "*"
+                        }
+                      ]
+                    },
+                    "Roles": [
+                      {
+                        "Ref": "serverlessTemplateApiRole"
+                      }
+                    ]
+                  }
+                },
+                "mcatApiPolicies": {
+                  "Type": "AWS::IAM::Policy",
+                  "Properties": {
+                    "PolicyName": "serverlessTemplateApiRolePolicy-local",
+                    "PolicyDocument": {
+                      "Version": "2012-10-17",
+                      "Statement": [
+                        {
+                          "Effect": "Allow",
+                          "Action": [
+                            "dynamodb:Query",
+                            "dynamodb:PutItem",
+                            "dynamodb:DeleteItem",
+                            "dynamodb:Update*"
+                          ],
+                          "Resource": [
+                            {
+                              "Fn::GetAtt": [
+                                "serverlessTemplateSomethingsTable",
+                                "Arn"
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "Roles": [
+                      {
+                        "Ref": "serverlessTemplateApiRole"
+                      }
+                    ]
+                  }
+                },
+                "serverlessTemplateSomethingsTable": {
+                  "Type": "AWS::DynamoDB::Table",
+                  "Properties": {
+                    "TableName": "serverlessTemplateSomethingsTable-local",
+                    "AttributeDefinitions": [
+                      {
+                        "AttributeName": "id",
+                        "AttributeType": "S"
+                      },
+                      {
+                        "AttributeName": "name",
+                        "AttributeType": "S"
+                      }
+                    ],
+                    "KeySchema": [
+                      {
+                        "AttributeName": "id",
+                        "KeyType": "HASH"
+                      },
+                      {
+                        "AttributeName": "name",
+                        "KeyType": "RANGE"
+                      }
+                    ],
+                    "ProvisionedThroughput": {
+                      "ReadCapacityUnits": 5,
+                      "WriteCapacityUnits": 5
+                    }
+                  }
+                }
+              }
+            },
+            "custom": {
+              "serverless-offline": {
+                "httpPort": 4000,
+                "host": "localhost",
+                "logLevel": "debug",
+                "useDocker": true,
+                "stages": [
+                  "local"
+                ]
+              },
+              "dynamodb": {
+                "start": {
+                  "docker": true,
+                  "port": 8080,
+                  "inMemory": true,
+                  "migrate": true,
+                  "seed": false,
+                  "convertEmptyValues": true
+                },
+                "stages": [
+                  "local",
+                  "local-server"
+                ]
+              }
+            }
+          },
+          "configFileDirPath": "/Users/salemezz/Desktop/serverless-template/services",
+          "config": {
+            "type": "file"
+          },
+          "options": {
+            "stage": "local",
+            "noTimeout": true,
+            "noAuth": true
+          },
+          "stage": "local",
+          "dashboard": null,
+          "logger": {
+            "namespace": "s:core:resolver:file",
+            "prefix": null,
+            "prefixColor": null
+          },
+          "_credentialsPromise": "<REDACTED>"
+        },
+        "resolvers": {}
+      },
+      "opt": {
+        "instance": {
+          "credentials": "<REDACTED>",
+          "serviceConfigFile": {
+            "service": "serverless-template",
+            "frameworkVersion": "4",
+            "provider": {
+              "name": "aws",
+              "runtime": "provided.al2023",
+              "region": "us-east-1",
+              "environment": {
+                "STAGE": "local",
+                "AWS_ACCESS_KEY_ID": "<REDACTED>",
+                "AWS_SECRET_ACCESS_KEY": "<REDACTED>",
+                "SERVERLESS_LICENSE_KEY": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWJzY3JpcHRpb25JZCI6IjZhMzRmZWFlLWExZTEtNGUxMi04OTYwLWI5YWQ1Njg4Y2Y3NCIsIm9yZ0lkIjoiYzY1NTI0ZGEtYWE4Yi00ZDI5LWFiYzktODRhMWY5ZWNkODBkIiwiaWF0IjoxNzMwMzEwNDkwLCJleHAiOjE3NjE4NDY0OTAsImlzcyI6ImFwcC5zZXJ2ZXJsZXNzLmNvbSJ9.Pz8RuuuPk474F_YGHUTXAfSaZs_L5gSA9v1KNSCQGJKFODsAaK0CjhGJjOq1jJbnoH1doNQfwB1bAzhqO9XlROZpZfszB8c67N0WoAkxRMNZ5S_fSif137JLi60xZ-Q0vRx5Yn3epvQLN8xKx3WLvXzb_AR9oHV5FfgfTqArjQzmDB8TjvlPiwDcNnLRhmb_Q4a_cCz9dW5K5YCcT-oamKp3JsrxSZkV0GMo_YNSTRmplkTrEWP-BQsFiwqciv4lPa7YDfKAU7o5cmnxOKMn6519IhqrkV4iXtqQhTpw0j1Pl5Uofluj4XbzfK6ky4ts4jyGm80DydXrROkHbEvYyg"
+              },
+              "stage": "local",
+              "versionFunctions": true
+            },
+            "package": {
+              "individually": true,
+              "patterns": [
+                "!./**",
+                "./bin/**/*.zip"
+              ],
+              "artifactsS3KeyDirname": "serverless/serverless-template/local/code-artifacts"
+            },
+            "plugins": [
+              "serverless-offline",
+              "serverless-dynamodb"
+            ],
+            "functions": {
+              "getSomething": {
+                "handler": "bootstrap",
+                "package": {
+                  "artifact": "bin/getSomething.zip"
+                },
+                "events": [
+                  {
+                    "http": {
+                      "path": "getSomething",
+                      "method": "get"
+                    }
+                  }
+                ],
+                "role": "serverlessTemplateApiRole",
+                "name": "serverless-template-local-getSomething"
+              },
+              "postSomething": {
+                "handler": "bootstrap",
+                "package": {
+                  "artifact": "bin/postSomething.zip"
+                },
+                "events": [
+                  {
+                    "http": {
+                      "path": "postSomething",
+                      "method": "post"
+                    }
+                  }
+                ],
+                "role": "serverlessTemplateApiRole",
+                "name": "serverless-template-local-postSomething"
+              },
+              "patchSomething": {
+                "handler": "bootstrap",
+                "package": {
+                  "artifact": "bin/patchSomething.zip"
+                },
+                "events": [
+                  {
+                    "http": {
+                      "path": "patchSomething",
+                      "method": "patch"
+                    }
+                  }
+                ],
+                "role": "serverlessTemplateApiRole",
+                "name": "serverless-template-local-patchSomething"
+              },
+              "deleteSomething": {
+                "handler": "bootstrap",
+                "package": {
+                  "artifact": "bin/deleteSomething.zip"
+                },
+                "events": [
+                  {
+                    "http": {
+                      "path": "deleteSomething",
+                      "method": "delete"
+                    }
+                  }
+                ],
+                "role": "serverlessTemplateApiRole",
+                "name": "serverless-template-local-deleteSomething"
+              }
+            },
+            "resources": {
+              "Resources": {
+                "serverlessTemplateUserPool": {
+                  "Type": "AWS::Cognito::UserPool",
+                  "Properties": {
+                    "UserPoolName": "serverlessTemplate-local",
+                    "UsernameAttributes": [
+                      "email"
+                    ],
+                    "Schema": [
+                      {
+                        "Name": "email",
+                        "AttributeDataType": "String",
+                        "Required": true,
+                        "Mutable": true
+                      }
+                    ],
+                    "Policies": {
+                      "PasswordPolicy": "<REDACTED>"
+                    },
+                    "AutoVerifiedAttributes": [
+                      "email"
+                    ],
+                    "EmailConfiguration": {
+                      "EmailSendingAccount": "DEVELOPER",
+                      "SourceArn": "arn:aws:ses:us-east-1:827183242253:identity/marneinnovationcenter.com",
+                      "ReplyToEmailAddress": "admin@marneinnovationcenter.com",
+                      "From": "admin@marneinnovationcenter.com"
+                    },
+                    "VerificationMessageTemplate": {
+                      "DefaultEmailOption": "CONFIRM_WITH_LINK"
+                    }
+                  }
+                },
+                "serverlessTemplateUserPoolClient": {
+                  "Type": "AWS::Cognito::UserPoolClient",
+                  "Properties": {
+                    "ClientName": "serverlessTemplate-local",
+                    "UserPoolId": {
+                      "Ref": "serverlessTemplate"
+                    }
+                  }
+                },
+                "serverlessTemplateLambdaPolicies": {
+                  "Type": "AWS::IAM::Policy",
+                  "Properties": {
+                    "PolicyName": "serverlessTemplateLambdaPolicy-local",
+                    "PolicyDocument": {
+                      "Version": "2012-10-17",
+                      "Statement": [
+                        {
+                          "Effect": "Allow",
+                          "Action": [
+                            "logs:CreateLogGroup",
+                            "logs:CreateLogStream",
+                            "logs:PutLogEvents",
+                            "logs:TagResource",
+                            "logs:PutRetentionPolicy"
+                          ],
+                          "Resource": [
+                            {
+                              "Fn::Join": [
+                                ":",
+                                [
+                                  "arn:aws:logs",
+                                  {
+                                    "Ref": "AWS::Region"
+                                  },
+                                  {
+                                    "Ref": "AWS::AccountId"
+                                  },
+                                  "log-group:/aws/lambda/*:*:*"
+                                ]
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "Effect": "Allow",
+                          "Action": [
+                            "ec2:CreateNetworkInterface",
+                            "ec2:DescribeNetworkInterfaces",
+                            "ec2:DetachNetworkInterface",
+                            "ec2:DeleteNetworkInterface"
+                          ],
+                          "Resource": "*"
+                        }
+                      ]
+                    },
+                    "Roles": [
+                      {
+                        "Ref": "serverlessTemplateApiRole"
+                      }
+                    ]
+                  }
+                },
+                "mcatApiPolicies": {
+                  "Type": "AWS::IAM::Policy",
+                  "Properties": {
+                    "PolicyName": "serverlessTemplateApiRolePolicy-local",
+                    "PolicyDocument": {
+                      "Version": "2012-10-17",
+                      "Statement": [
+                        {
+                          "Effect": "Allow",
+                          "Action": [
+                            "dynamodb:Query",
+                            "dynamodb:PutItem",
+                            "dynamodb:DeleteItem",
+                            "dynamodb:Update*"
+                          ],
+                          "Resource": [
+                            {
+                              "Fn::GetAtt": [
+                                "serverlessTemplateSomethingsTable",
+                                "Arn"
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "Roles": [
+                      {
+                        "Ref": "serverlessTemplateApiRole"
+                      }
+                    ]
+                  }
+                },
+                "serverlessTemplateSomethingsTable": {
+                  "Type": "AWS::DynamoDB::Table",
+                  "Properties": {
+                    "TableName": "serverlessTemplateSomethingsTable-local",
+                    "AttributeDefinitions": [
+                      {
+                        "AttributeName": "id",
+                        "AttributeType": "S"
+                      },
+                      {
+                        "AttributeName": "name",
+                        "AttributeType": "S"
+                      }
+                    ],
+                    "KeySchema": [
+                      {
+                        "AttributeName": "id",
+                        "KeyType": "HASH"
+                      },
+                      {
+                        "AttributeName": "name",
+                        "KeyType": "RANGE"
+                      }
+                    ],
+                    "ProvisionedThroughput": {
+                      "ReadCapacityUnits": 5,
+                      "WriteCapacityUnits": 5
+                    }
+                  }
+                }
+              }
+            },
+            "custom": {
+              "serverless-offline": {
+                "httpPort": 4000,
+                "host": "localhost",
+                "logLevel": "debug",
+                "useDocker": true,
+                "stages": [
+                  "local"
+                ]
+              },
+              "dynamodb": {
+                "start": {
+                  "docker": true,
+                  "port": 8080,
+                  "inMemory": true,
+                  "migrate": true,
+                  "seed": false,
+                  "convertEmptyValues": true
+                },
+                "stages": [
+                  "local",
+                  "local-server"
+                ]
+              }
+            }
+          },
+          "configFileDirPath": "/Users/salemezz/Desktop/serverless-template/services",
+          "config": {
+            "type": "opt"
+          },
+          "options": {
+            "stage": "local",
+            "noTimeout": true,
+            "noAuth": true
+          },
+          "stage": "local",
+          "dashboard": null,
+          "logger": {
+            "namespace": "s:core:resolver:opt",
+            "prefix": null,
+            "prefixColor": null
+          },
+          "_credentialsPromise": "<REDACTED>"
+        },
+        "resolvers": {}
+      }
+    },
     "composeServiceName": null,
     "servicePath": "/Users/salemezz/Desktop/serverless-template/services",
     "serviceConfigFileName": "serverless.yml",
@@ -13,17 +624,24 @@
       "frameworkVersion": "4",
       "provider": {
         "name": "aws",
-        "runtime": "go1.x",
+        "runtime": "provided.al2023",
         "region": "us-east-1",
-        "environment": "${file(./env.js)}",
-        "stage": "local"
+        "environment": {
+          "STAGE": "local",
+          "AWS_ACCESS_KEY_ID": "<REDACTED>",
+          "AWS_SECRET_ACCESS_KEY": "<REDACTED>",
+          "SERVERLESS_LICENSE_KEY": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWJzY3JpcHRpb25JZCI6IjZhMzRmZWFlLWExZTEtNGUxMi04OTYwLWI5YWQ1Njg4Y2Y3NCIsIm9yZ0lkIjoiYzY1NTI0ZGEtYWE4Yi00ZDI5LWFiYzktODRhMWY5ZWNkODBkIiwiaWF0IjoxNzMwMzEwNDkwLCJleHAiOjE3NjE4NDY0OTAsImlzcyI6ImFwcC5zZXJ2ZXJsZXNzLmNvbSJ9.Pz8RuuuPk474F_YGHUTXAfSaZs_L5gSA9v1KNSCQGJKFODsAaK0CjhGJjOq1jJbnoH1doNQfwB1bAzhqO9XlROZpZfszB8c67N0WoAkxRMNZ5S_fSif137JLi60xZ-Q0vRx5Yn3epvQLN8xKx3WLvXzb_AR9oHV5FfgfTqArjQzmDB8TjvlPiwDcNnLRhmb_Q4a_cCz9dW5K5YCcT-oamKp3JsrxSZkV0GMo_YNSTRmplkTrEWP-BQsFiwqciv4lPa7YDfKAU7o5cmnxOKMn6519IhqrkV4iXtqQhTpw0j1Pl5Uofluj4XbzfK6ky4ts4jyGm80DydXrROkHbEvYyg"
+        },
+        "stage": "local",
+        "versionFunctions": true
       },
       "package": {
         "individually": true,
         "patterns": [
           "!./**",
           "./bin/**/*.zip"
-        ]
+        ],
+        "artifactsS3KeyDirname": "serverless/serverless-template/local/code-artifacts"
       },
       "plugins": [
         "serverless-offline",
@@ -43,7 +661,8 @@
               }
             }
           ],
-          "role": "serverlessTemplateApiRole"
+          "role": "serverlessTemplateApiRole",
+          "name": "serverless-template-local-getSomething"
         },
         "postSomething": {
           "handler": "bootstrap",
@@ -58,7 +677,8 @@
               }
             }
           ],
-          "role": "serverlessTemplateApiRole"
+          "role": "serverlessTemplateApiRole",
+          "name": "serverless-template-local-postSomething"
         },
         "patchSomething": {
           "handler": "bootstrap",
@@ -73,7 +693,8 @@
               }
             }
           ],
-          "role": "serverlessTemplateApiRole"
+          "role": "serverlessTemplateApiRole",
+          "name": "serverless-template-local-patchSomething"
         },
         "deleteSomething": {
           "handler": "bootstrap",
@@ -88,7 +709,8 @@
               }
             }
           ],
-          "role": "serverlessTemplateApiRole"
+          "role": "serverlessTemplateApiRole",
+          "name": "serverless-template-local-deleteSomething"
         }
       },
       "resources": {
@@ -244,7 +866,10 @@
                   "KeyType": "RANGE"
                 }
               ],
-              "BillingMode": "PAY_PER_REQUEST"
+              "ProvisionedThroughput": {
+                "ReadCapacityUnits": 5,
+                "WriteCapacityUnits": 5
+              }
             }
           }
         }
@@ -275,7 +900,7 @@
         }
       }
     },
-    "serviceRawFile": "service: serverless-template\n\nframeworkVersion: '4'\n\nprovider:\n  name: aws\n  runtime: go1.x\n  region: us-east-1\n  environment: ${file(./env.js)}\n  stage: ${opt:stage}\n\npackage:\n  individually: true\n  patterns:\n    - '!./**'\n    - './bin/**/*.zip'\n\nplugins:\n  - 'serverless-offline'\n  - 'serverless-dynamodb'\n\n\n#   ____ __ __ __  __   ___ ______ __   ___   __  __  __ \n#  ||    || || ||\\ ||  //   | || | ||  // \\\\  ||\\ || (( \\\n#  ||==  || || ||\\\\|| ((      ||   || ((   )) ||\\\\||  \\\\ \n#  ||    \\\\_// || \\||  \\\\__   ||   ||  \\\\_//  || \\|| \\_))\n# ========================================================\n\nfunctions:\n  getSomething:\n    handler: bootstrap\n    package:\n      artifact: bin/getSomething.zip \n    events:\n      - http:\n          path: getSomething\n          method: get\n    role: serverlessTemplateApiRole\n  \n  postSomething:\n    handler: bootstrap\n    package:\n      artifact: bin/postSomething.zip \n    events:\n      - http:\n          path: postSomething\n          method: post\n    role: serverlessTemplateApiRole\n  \n  patchSomething:\n    handler: bootstrap\n    package:\n      artifact: bin/patchSomething.zip \n    events:\n      - http:\n          path: patchSomething\n          method: patch\n    role: serverlessTemplateApiRole\n\n  deleteSomething:\n    handler: bootstrap\n    package:\n      artifact: bin/deleteSomething.zip \n    events:\n      - http:\n          path: deleteSomething\n          method: delete\n    role: serverlessTemplateApiRole\n\n#  ____   ____  __    ___   __ __ ____    ___  ____  __ \n#  || \\\\ ||    (( \\  // \\\\  || || || \\\\  //   ||    (( \\\n#  ||_// ||==   \\\\  ((   )) || || ||_// ((    ||==   \\\\ \n#  || \\\\ ||___ \\_))  \\\\_//  \\\\_// || \\\\  \\\\__ ||___ \\_))\n# ========================================================\n\nresources: \n  Resources: \n\n    ## COGNITO RESOURCES ##\n\n    serverlessTemplateUserPool:\n      Type: AWS::Cognito::UserPool\n      Properties:\n        UserPoolName: serverlessTemplate-${opt:stage}\n        UsernameAttributes:\n          - email\n        Schema:\n          - Name: email\n            AttributeDataType: String\n            Required: true\n            Mutable: true\n        Policies:\n          PasswordPolicy:\n            MinimumLength: 6\n        AutoVerifiedAttributes: \n          - email\n        EmailConfiguration:\n          EmailSendingAccount: DEVELOPER\n          SourceArn: arn:aws:ses:us-east-1:827183242253:identity/marneinnovationcenter.com\n          ReplyToEmailAddress: admin@marneinnovationcenter.com\n          From: admin@marneinnovationcenter.com\n        VerificationMessageTemplate:\n          DefaultEmailOption: CONFIRM_WITH_LINK\n      \n    serverlessTemplateUserPoolClient:\n      Type: AWS::Cognito::UserPoolClient\n      Properties:\n        ClientName: serverlessTemplate-${opt:stage}\n        UserPoolId: !Ref serverlessTemplate\n    \n    ## ROLES AND PERMISSIONS ##\n    \n    serverlessTemplateLambdaPolicies:\n      Type: AWS::IAM::Policy\n      Properties:\n        PolicyName: serverlessTemplateLambdaPolicy-${opt:stage}\n        PolicyDocument:\n          Version: \"2012-10-17\"\n          Statement:\n            - Effect: Allow\n              Action:\n                - logs:CreateLogGroup\n                - logs:CreateLogStream\n                - logs:PutLogEvents\n                - logs:TagResource\n                - logs:PutRetentionPolicy\n              Resource:\n                - !Join\n                  - \":\"\n                  - - \"arn:aws:logs\"\n                    - Ref: \"AWS::Region\"\n                    - Ref: \"AWS::AccountId\"\n                    - \"log-group:/aws/lambda/*:*:*\"\n            - Effect: Allow\n              Action:\n                - ec2:CreateNetworkInterface\n                - ec2:DescribeNetworkInterfaces\n                - ec2:DetachNetworkInterface\n                - ec2:DeleteNetworkInterface\n              Resource: \"*\"\n        Roles: \n          - Ref: serverlessTemplateApiRole \n    \n    mcatApiPolicies:\n      Type: AWS::IAM::Policy\n      Properties:\n        PolicyName: serverlessTemplateApiRolePolicy-${opt:stage}\n        PolicyDocument:\n          Version: \"2012-10-17\"\n          Statement:\n            - Effect: \"Allow\"\n              Action:\n                - dynamodb:Query\n                - dynamodb:PutItem\n                - dynamodb:DeleteItem\n                - dynamodb:Update*\n\n              Resource: \n                - !GetAtt serverlessTemplateSomethingsTable.Arn \n        Roles: \n          - Ref: serverlessTemplateApiRole \n\n    ## DYNAMODB TABLES ##\n\n    serverlessTemplateSomethingsTable:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: serverlessTemplateSomethingsTable-${opt:stage}\n        AttributeDefinitions:\n          - AttributeName: id\n            AttributeType: S\n          - AttributeName: name\n            AttributeType: S\n        KeySchema:\n          - AttributeName: id\n            KeyType: HASH\n          - AttributeName: name\n            KeyType: RANGE\n        BillingMode: PAY_PER_REQUEST\n\ncustom:\n\n  serverless-offline:\n      httpPort: 4000\n      host: localhost\n      logLevel: debug\n      useDocker: true\n      stages:\n        - local\n    \n  dynamodb:\n    start:\n      docker: true\n      port: 8080\n      inMemory: true\n      migrate: true\n      seed: false\n      convertEmptyValues: true\n    # seed:\n    #   domain:\n    #     sources:\n    #       - table: serverlessTemplateSomethingsTable-${opt:stage}\n    #         sources: [./seedData/deviceTableSeed.json]\n    stages:\n      - local\n      - local-server",
+    "serviceRawFile": "service: serverless-template\n\nframeworkVersion: '4'\n\nprovider:\n  name: aws\n  runtime: provided.al2023\n  region: us-east-1\n  environment: ${file(./env.js)}\n  stage: ${opt:stage}\n\npackage:\n  individually: true\n  patterns:\n    - '!./**'\n    - './bin/**/*.zip'\n\nplugins:\n  - 'serverless-offline'\n  - 'serverless-dynamodb'\n\n\n#   ____ __ __ __  __   ___ ______ __   ___   __  __  __ \n#  ||    || || ||\\ ||  //   | || | ||  // \\\\  ||\\ || (( \\\n#  ||==  || || ||\\\\|| ((      ||   || ((   )) ||\\\\||  \\\\ \n#  ||    \\\\_// || \\||  \\\\__   ||   ||  \\\\_//  || \\|| \\_))\n# ========================================================\n\nfunctions:\n  getSomething:\n    handler: bootstrap\n    package:\n      artifact: bin/getSomething.zip \n    events:\n      - http:\n          path: getSomething\n          method: get\n    role: serverlessTemplateApiRole\n  \n  postSomething:\n    handler: bootstrap\n    package:\n      artifact: bin/postSomething.zip \n    events:\n      - http:\n          path: postSomething\n          method: post\n    role: serverlessTemplateApiRole\n  \n  patchSomething:\n    handler: bootstrap\n    package:\n      artifact: bin/patchSomething.zip \n    events:\n      - http:\n          path: patchSomething\n          method: patch\n    role: serverlessTemplateApiRole\n\n  deleteSomething:\n    handler: bootstrap\n    package:\n      artifact: bin/deleteSomething.zip \n    events:\n      - http:\n          path: deleteSomething\n          method: delete\n    role: serverlessTemplateApiRole\n\n#  ____   ____  __    ___   __ __ ____    ___  ____  __ \n#  || \\\\ ||    (( \\  // \\\\  || || || \\\\  //   ||    (( \\\n#  ||_// ||==   \\\\  ((   )) || || ||_// ((    ||==   \\\\ \n#  || \\\\ ||___ \\_))  \\\\_//  \\\\_// || \\\\  \\\\__ ||___ \\_))\n# ========================================================\n\nresources: \n  Resources: \n\n    ## COGNITO RESOURCES ##\n\n    serverlessTemplateUserPool:\n      Type: AWS::Cognito::UserPool\n      Properties:\n        UserPoolName: serverlessTemplate-${opt:stage}\n        UsernameAttributes:\n          - email\n        Schema:\n          - Name: email\n            AttributeDataType: String\n            Required: true\n            Mutable: true\n        Policies:\n          PasswordPolicy:\n            MinimumLength: 6\n        AutoVerifiedAttributes: \n          - email\n        EmailConfiguration:\n          EmailSendingAccount: DEVELOPER\n          SourceArn: arn:aws:ses:us-east-1:827183242253:identity/marneinnovationcenter.com\n          ReplyToEmailAddress: admin@marneinnovationcenter.com\n          From: admin@marneinnovationcenter.com\n        VerificationMessageTemplate:\n          DefaultEmailOption: CONFIRM_WITH_LINK\n      \n    serverlessTemplateUserPoolClient:\n      Type: AWS::Cognito::UserPoolClient\n      Properties:\n        ClientName: serverlessTemplate-${opt:stage}\n        UserPoolId: !Ref serverlessTemplate\n    \n    ## ROLES AND PERMISSIONS ##\n    \n    serverlessTemplateLambdaPolicies:\n      Type: AWS::IAM::Policy\n      Properties:\n        PolicyName: serverlessTemplateLambdaPolicy-${opt:stage}\n        PolicyDocument:\n          Version: \"2012-10-17\"\n          Statement:\n            - Effect: Allow\n              Action:\n                - logs:CreateLogGroup\n                - logs:CreateLogStream\n                - logs:PutLogEvents\n                - logs:TagResource\n                - logs:PutRetentionPolicy\n              Resource:\n                - !Join\n                  - \":\"\n                  - - \"arn:aws:logs\"\n                    - Ref: \"AWS::Region\"\n                    - Ref: \"AWS::AccountId\"\n                    - \"log-group:/aws/lambda/*:*:*\"\n            - Effect: Allow\n              Action:\n                - ec2:CreateNetworkInterface\n                - ec2:DescribeNetworkInterfaces\n                - ec2:DetachNetworkInterface\n                - ec2:DeleteNetworkInterface\n              Resource: \"*\"\n        Roles: \n          - Ref: serverlessTemplateApiRole \n    \n    mcatApiPolicies:\n      Type: AWS::IAM::Policy\n      Properties:\n        PolicyName: serverlessTemplateApiRolePolicy-${opt:stage}\n        PolicyDocument:\n          Version: \"2012-10-17\"\n          Statement:\n            - Effect: \"Allow\"\n              Action:\n                - dynamodb:Query\n                - dynamodb:PutItem\n                - dynamodb:DeleteItem\n                - dynamodb:Update*\n\n              Resource: \n                - !GetAtt serverlessTemplateSomethingsTable.Arn \n        Roles: \n          - Ref: serverlessTemplateApiRole \n\n    ## DYNAMODB TABLES ##\n\n    serverlessTemplateSomethingsTable:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: serverlessTemplateSomethingsTable-${opt:stage}\n        AttributeDefinitions:\n          - AttributeName: id\n            AttributeType: S\n          - AttributeName: name\n            AttributeType: S\n        KeySchema:\n          - AttributeName: id\n            KeyType: HASH\n          - AttributeName: name\n            KeyType: RANGE\n        BillingMode: PAY_PER_REQUEST\n\ncustom:\n  serverless-offline:\n      httpPort: 4000\n      host: localhost\n      logLevel: debug\n      useDocker: true\n      stages:\n        - local\n    \n  dynamodb:\n    start:\n      docker: true\n      port: 8080\n      inMemory: true\n      migrate: true\n      seed: false\n      convertEmptyValues: true\n    # seed:\n    #   domain:\n    #     sources:\n    #       - table: serverlessTemplateSomethingsTable-${opt:stage}\n    #         sources: [./seedData/deviceTableSeed.json]\n    \n    stages:\n      - local\n      - local-server",
     "command": [
       "offline",
       "start"
@@ -286,11 +911,11 @@
       "noAuth": true
     },
     "error": {
-      "message": "Failed to resolve variable './env.js' with resolver 'file' and provider 'file': Error: Cannot load or execute JS module \"/Users/salemezz/Desktop/serverless-template/services/env.js\": Error: Cannot find module 'aws-sdk'\nRequire stack:\n- /Users/salemezz/Desktop/serverless-template/services/env.js\n    at Module._resolveFilename (node:internal/modules/cjs/loader:1248:15)\n    at Module._load (node:internal/modules/cjs/loader:1074:27)\n    at TracingChannel.traceSync (node:diagnostics_channel:315:14)\n    at wrapModuleLoad (node:internal/modules/cjs/loader:217:24)\n    at Module.require (node:internal/modules/cjs/loader:1339:12)\n    at require (node:internal/modules/helpers:125:16)\n    at module.exports (/Users/salemezz/Desktop/serverless-template/services/env.js:6:17)\n    at resolveJsModule (file:///Users/salemezz/.serverless/releases/4.4.7/package/dist/sf-core.js:248:5081)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async resolveVariableFromFile (file:///Users/salemezz/.serverless/releases/4.4.7/package/dist/sf-core.js:248:3944)",
-      "stack": "Error: Failed to resolve variable './env.js' with resolver 'file' and provider 'file': Error: Cannot load or execute JS module \"/Users/salemezz/Desktop/serverless-template/services/env.js\": Error: Cannot find module 'aws-sdk'\nRequire stack:\n- /Users/salemezz/Desktop/serverless-template/services/env.js\n    at Module._resolveFilename (node:internal/modules/cjs/loader:1248:15)\n    at Module._load (node:internal/modules/cjs/loader:1074:27)\n    at TracingChannel.traceSync (node:diagnostics_channel:315:14)\n    at wrapModuleLoad (node:internal/modules/cjs/loader:217:24)\n    at Module.require (node:internal/modules/cjs/loader:1339:12)\n    at require (node:internal/modules/helpers:125:16)\n    at module.exports (/Users/salemezz/Desktop/serverless-template/services/env.js:6:17)\n    at resolveJsModule (file:///Users/salemezz/.serverless/releases/4.4.7/package/dist/sf-core.js:248:5081)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async resolveVariableFromFile (file:///Users/salemezz/.serverless/releases/4.4.7/package/dist/sf-core.js:248:3944)\n    at #resolveKey (file:///Users/salemezz/.serverless/releases/4.4.7/package/dist/sf-core.js:693:50294)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async _ResolverManager.resolve (file:///Users/salemezz/.serverless/releases/4.4.7/package/dist/sf-core.js:693:55687)\n    at async #handlePlaceholderNode (file:///Users/salemezz/.serverless/releases/4.4.7/package/dist/sf-core.js:693:54456)\n    at async file:///Users/salemezz/.serverless/releases/4.4.7/package/dist/sf-core.js:693:52448\n    at async processNodeAndHandleCompletion (file:///Users/salemezz/.serverless/releases/4.4.7/package/dist/sf-core.js:693:43090)",
-      "code": "RESOLVER_RESOLVE_VARIABLE_ERROR"
+      "message": "Cannot read properties of null (reading 'cleanup')",
+      "stack": "TypeError: Cannot read properties of null (reading 'cleanup')\n    at HandlerRunner.cleanup (file:///Users/salemezz/Desktop/serverless-template/services/node_modules/serverless-offline/src/lambda/handler-runner/HandlerRunner.js:105:25)\n    at LambdaFunction.cleanup (file:///Users/salemezz/Desktop/serverless-template/services/node_modules/serverless-offline/src/lambda/LambdaFunction.js:226:31)\n    at file:///Users/salemezz/Desktop/serverless-template/services/node_modules/serverless-offline/src/lambda/LambdaFunctionPool.js:63:41\n    at Set.forEach (<anonymous>)\n    at file:///Users/salemezz/Desktop/serverless-template/services/node_modules/serverless-offline/src/lambda/LambdaFunctionPool.js:62:23\n    at Map.forEach (<anonymous>)\n    at #cleanupPool (file:///Users/salemezz/Desktop/serverless-template/services/node_modules/serverless-offline/src/lambda/LambdaFunctionPool.js:61:16)\n    at LambdaFunctionPool.cleanup (file:///Users/salemezz/Desktop/serverless-template/services/node_modules/serverless-offline/src/lambda/LambdaFunctionPool.js:76:28)\n    at Lambda.cleanup (file:///Users/salemezz/Desktop/serverless-template/services/node_modules/serverless-offline/src/lambda/Lambda.js:66:37)\n    at ServerlessOffline.end (file:///Users/salemezz/Desktop/serverless-template/services/node_modules/serverless-offline/src/ServerlessOffline.js:121:22)"
     },
-    "machineId": "c82dbb85ea3f197c58ea8e4cf25930d2",
+    "params": {},
+    "machineId": "5f55d5de796dbfffc9ead8540b9c4140",
     "stage": "local",
     "accessKeyV2": "<REDACTED>",
     "accessKeyV1": "<REDACTED>",
@@ -309,6 +934,13 @@
     "userName": "cmi2mcat",
     "subscription": null,
     "userEmail": "admin@marneinnovationcenter.com",
+    "serviceProviderAwsRegion": "us-east-1",
+    "serviceProviderAwsCredentials": "<REDACTED>",
+    "serviceProviderAwsAccountId": "827183242253",
+    "projectType": "traditional",
+    "versionSf": "4.4.7",
+    "serviceProviderAwsCfStackName": "serverless-template-local",
+    "serviceUniqueId": null,
     "serviceProviderAwsCfStackId": null,
     "serviceProviderAwsCfStackCreated": null,
     "serviceProviderAwsCfStackUpdated": null,

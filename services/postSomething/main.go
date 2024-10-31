@@ -2,56 +2,64 @@ package main
 
 import (
     "context"
+    "encoding/json"
     "fmt"
+    "os"
+
+    "github.com/Marne-Software/serverless-template/services/helpers"
+    "github.com/aws/aws-lambda-go/events"
     "github.com/aws/aws-lambda-go/lambda"
     "github.com/aws/aws-sdk-go-v2/aws"
-    "github.com/aws/aws-sdk-go-v2/config"
     "github.com/aws/aws-sdk-go-v2/service/dynamodb"
     "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
-// Request holds the expected input for the Lambda function
 type Request struct {
     Id   string `json:"id"`
     Name string `json:"name"`
 }
 
-// Response holds the output format for the Lambda function
-type Response struct {
-    Message string `json:"message"`
-}
-
 var dbClient *dynamodb.Client
 
 func init() {
-    // Load the AWS configuration
-    cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("us-east-1"))
-    if err != nil {
-        panic("unable to load SDK config, " + err.Error())
-    }
-
-    // Create a DynamoDB client
-    dbClient = dynamodb.NewFromConfig(cfg)
+    dbClient = helpers.InitializeDynamoDBClient()
 }
 
-func handler(ctx context.Context, req Request) (Response, error) {
-    // Define the input for the PutItem request
+func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+    var req Request
+    if err := json.Unmarshal([]byte(request.Body), &req); err != nil {
+        fmt.Println("Error unmarshaling request body:", err)
+        return events.APIGatewayProxyResponse{
+            StatusCode: 400,
+            Body:       `{"message": "Invalid request body"}`,
+        }, err
+    }
+
+    fmt.Printf("Request ID: %s\n", req.Id)
+    fmt.Printf("Request Name: %s\n", req.Name)
+
+    stage := os.Getenv("STAGE")
     input := &dynamodb.PutItemInput{
-        TableName: aws.String("serverlessTemplateSomethingsTable"),
+        TableName: aws.String("serverlessTemplateSomethingsTable-" + stage),
         Item: map[string]types.AttributeValue{
             "id":   &types.AttributeValueMemberS{Value: req.Id},
             "name": &types.AttributeValueMemberS{Value: req.Name},
         },
     }
 
-    // Put item into DynamoDB
     _, err := dbClient.PutItem(ctx, input)
     if err != nil {
-        return Response{}, fmt.Errorf("failed to put item: %w", err)
+        fmt.Printf("Raw error response: %v\n", err)
+        return events.APIGatewayProxyResponse{
+            StatusCode: 500,
+            Body:       `{"message": "Failed to put item"}`,
+        }, err
     }
 
-    // Return a success message
-    return Response{Message: "Item successfully added"}, nil
+    return events.APIGatewayProxyResponse{
+        StatusCode: 200,
+        Body:       `{"message": "Item successfully added"}`,
+    }, nil
 }
 
 func main() {

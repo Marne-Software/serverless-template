@@ -18,13 +18,14 @@ build: clean
 		rm bootstrap; \
 	done
 
+# LOCAL COMMANDS	
+
 run: build
-	@sls offline start --stage local --noTimeout --noAuth & \
+	@docker compose up -d
+	@sam local start-api --port 4000 --docker-network host & \
 	SLS_PID=$$!; \
 	trap "make down; kill $$SLS_PID" INT; \
-	while ! nc -z localhost 3000; do sleep 1; done; \
 	wait $$SLS_PID
 
 down:
-	@docker stop $$(docker ps -a -q)
-	@docker rm $$(docker ps -a -q)
+	@docker compose down --volumes

@@ -1,64 +1,75 @@
 package main
 
 import (
-	"context"
-	"fmt"
-	"os"
+    "context"
+    "encoding/json"
+    "fmt"
+    "os"
 
-	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
-	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+    "github.com/Marne-Software/serverless-template/services/helpers"
+    "github.com/aws/aws-lambda-go/events"
+    "github.com/aws/aws-lambda-go/lambda"
+    "github.com/aws/aws-sdk-go-v2/aws"
+    "github.com/aws/aws-sdk-go-v2/service/dynamodb"
+    "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
-
-// Request holds the expected input for the Lambda function
-type Request struct {
-    Id string `json:"id"`
-}
-
-// Response holds the output format for the Lambda function
-type Response struct {
-    Items []map[string]types.AttributeValue `json:"items"`
-}
 
 var dbClient *dynamodb.Client
 
 func init() {
-    // Load the AWS configuration
-    cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("us-east-1"))
-    if err != nil {
-        panic("unable to load SDK config, " + err.Error())
-    }
-
-    // Create a DynamoDB client
-    dbClient = dynamodb.NewFromConfig(cfg)
+    dbClient = helpers.InitializeDynamoDBClient()
 }
 
-func handler(ctx context.Context, req Request) (Response, error) {
-	stage := os.Getenv("STAGE")
-    // Define the input for the Query request, specifying only the partition key (id)
+func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+    // Retrieve the id from the path parameters
+    id, exists := request.PathParameters["id"]
+    if !exists || id == "" {
+        fmt.Println("ID not provided in path parameters")
+        return events.APIGatewayProxyResponse{
+            StatusCode: 400,
+            Body:       `{"message": "ID not provided in path parameters"}`,
+        }, nil
+    }
+
+    stage := os.Getenv("STAGE")
     input := &dynamodb.QueryInput{
         TableName:              aws.String("serverlessTemplateSomethingsTable-" + stage),
         KeyConditionExpression: aws.String("id = :id"),
         ExpressionAttributeValues: map[string]types.AttributeValue{
-            ":id": &types.AttributeValueMemberS{Value: req.Id},
+            ":id": &types.AttributeValueMemberS{Value: id},
         },
     }
 
-    // Query DynamoDB for items with the specified id
     result, err := dbClient.Query(ctx, input)
     if err != nil {
-        return Response{}, fmt.Errorf("failed to query items: %w", err)
+        fmt.Printf("Failed to query items: %v\n", err)
+        return events.APIGatewayProxyResponse{
+            StatusCode: 500,
+            Body:       `{"message": "Failed to query items"}`,
+        }, err
     }
 
-    // Check if any items were found
     if len(result.Items) == 0 {
-        return Response{}, fmt.Errorf("no items found with id %s", req.Id)
+        return events.APIGatewayProxyResponse{
+            StatusCode: 404,
+            Body:       fmt.Sprintf(`{"message": "No items found with id %s"}`, id),
+        }, nil
     }
 
-    // Return the found items
-    return Response{Items: result.Items}, nil
+    // Marshal the query results to JSON for the response body
+    items, err := json.Marshal(result.Items)
+    if err != nil {
+        fmt.Printf("Failed to marshal items: %v\n", err)
+        return events.APIGatewayProxyResponse{
+            StatusCode: 500,
+            Body:       `{"message": "Failed to process items"}`,
+        }, err
+    }
+
+    return events.APIGatewayProxyResponse{
+        StatusCode: 200,
+        Body:       string(items),
+    }, nil
 }
 
 func main() {

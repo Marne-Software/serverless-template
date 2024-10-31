@@ -1,0 +1,87 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: SAM Template for Local Testing with Docker
+
+Globals:
+  Function:
+    Runtime: go1.x
+    MemorySize: 128
+    Timeout: 30
+    Environment:
+      Variables:
+        STAGE: local
+        DYNAMODB_ENDPOINT: http://host.docker.internal:8080   # For Docker on localhost
+
+Resources:
+
+  ## Lambda Functions ##
+  
+  GetSomethingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: bootstrap
+      CodeUri: bin/getSomething.zip
+      Events:
+        GetSomethingApi:
+          Type: Api
+          Properties:
+            Path: /getSomething/{id}
+            Method: get
+
+  PostSomethingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: bootstrap
+      CodeUri: bin/postSomething.zip
+      Events:
+        PostSomethingApi:
+          Type: Api
+          Properties:
+            Path: /postSomething
+            Method: post
+
+  PatchSomethingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: bootstrap
+      CodeUri: bin/patchSomething.zip
+      Events:
+        PatchSomethingApi:
+          Type: Api
+          Properties:
+            Path: /patchSomething
+            Method: patch
+
+  DeleteSomethingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: bootstrap
+      CodeUri: bin/deleteSomething.zip
+      Events:
+        DeleteSomethingApi:
+          Type: Api
+          Properties:
+            Path: /deleteSomething/
+            Method: delete
+
+  ## DynamoDB Table ##
+  
+  ServerlessTemplateSomethingsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: serverlessTemplateSomethingsTable-local
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: name
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+        - AttributeName: name
+          KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
+
+Outputs:
+  ApiUrl:
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}/"
+    Description: "API Gateway endpoint URL"
