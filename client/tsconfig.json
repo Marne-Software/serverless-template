@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    "baseUrl": "./",
+    "target": "es5",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "downlevelIteration": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "module": "CommonJS",
+    "useUnknownInCatchVariables": false,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": false,
+    "noEmit": false,
+    "sourceMap": true,
+    "jsx": "react",
+    "outDir": "./dist",
+    "types": ["jest"],
+    "typeRoots": ["./node_modules/@types"]
+  },
+  
+  "include": [
+    "__tests__",
+    "__mocks__", 
+    "src",
+    "setupTests.ts",
+    "babel.config.js"
+  ]
+}

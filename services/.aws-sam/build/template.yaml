@@ -1,0 +1,141 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SAM Template for Local Testing with Docker
+Globals:
+  Api:
+    Cors:
+      AllowMethods: '''GET,POST,OPTIONS'''
+      AllowHeaders: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent,X-Amzn-Trace-Id'''
+      AllowOrigin: '''*'''
+  Function:
+    Runtime: provided.al2023
+    MemorySize: 128
+    Timeout: 30
+    Environment:
+      Variables:
+        STAGE: ''
+        DYNAMODB_ENDPOINT: ''
+Parameters:
+  Stage:
+    Type: String
+    Default: local
+Resources:
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: LambdaDynamoDBPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            Resource:
+              Fn::GetAtt:
+              - ServerlessTemplateSomethingsTable
+              - Arn
+  ServerlessRestApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: ServerlessRestApi
+      StageName:
+        Ref: Stage
+  GetSomethingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: bootstrap
+      CodeUri: ../../bin/getSomething.zip
+      Role:
+        Fn::GetAtt:
+        - LambdaExecutionRole
+        - Arn
+      Events:
+        GetSomethingApi:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: ServerlessRestApi
+            Path: /api/getSomething/{id}
+            Method: get
+  PostSomethingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: bootstrap
+      CodeUri: ../../bin/postSomething.zip
+      Role:
+        Fn::GetAtt:
+        - LambdaExecutionRole
+        - Arn
+      Events:
+        PostSomethingApi:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: ServerlessRestApi
+            Path: /api/postSomething
+            Method: post
+  PatchSomethingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: bootstrap
+      CodeUri: ../../bin/patchSomething.zip
+      Role:
+        Fn::GetAtt:
+        - LambdaExecutionRole
+        - Arn
+      Events:
+        PatchSomethingApi:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: ServerlessRestApi
+            Path: /api/patchSomething
+            Method: patch
+  DeleteSomethingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: bootstrap
+      CodeUri: ../../bin/deleteSomething.zip
+      Role:
+        Fn::GetAtt:
+        - LambdaExecutionRole
+        - Arn
+      Events:
+        DeleteSomethingApi:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: ServerlessRestApi
+            Path: /api/deleteSomething
+            Method: delete
+  ServerlessTemplateSomethingsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: serverlessTemplateSomethingsTable-local
+      AttributeDefinitions:
+      - AttributeName: id
+        AttributeType: S
+      - AttributeName: name
+        AttributeType: S
+      KeySchema:
+      - AttributeName: id
+        KeyType: HASH
+      - AttributeName: namey
+        KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
+Outputs:
+  ApiUrl:
+    Value:
+      Fn::Sub: https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}/
+    Description: API Gateway endpoint URL

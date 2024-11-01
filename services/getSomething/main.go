@@ -21,6 +21,7 @@ func init() {
 }
 
 func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+    headers := helpers.GetDefaultHeaders()
     // Retrieve the id from the path parameters
     id, exists := request.PathParameters["id"]
     if !exists || id == "" {
@@ -67,6 +68,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
     }
 
     return events.APIGatewayProxyResponse{
+        Headers:    headers,
         StatusCode: 200,
         Body:       string(items),
     }, nil

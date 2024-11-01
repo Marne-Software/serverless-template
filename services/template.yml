@@ -1,17 +1,62 @@
 AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
 Description: SAM Template for Local Testing with Docker
 
 Globals:
+  Api:
+    Cors:
+      AllowMethods: "'GET,POST,OPTIONS'"
+      AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent,X-Amzn-Trace-Id'"
+      AllowOrigin: "'*'"
   Function:
-    Runtime: go1.x
+    Runtime: provided.al2023
     MemorySize: 128
     Timeout: 30
     Environment:
       Variables:
-        STAGE: local
-        DYNAMODB_ENDPOINT: http://host.docker.internal:8080   # For Docker on localhost
+        STAGE: ""
+        DYNAMODB_ENDPOINT: ""
+
+Parameters:
+  Stage:
+    Type: String
+    Default: "local" 
 
 Resources:
+
+  ## IAM Role for Lambda Functions ##
+  
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaDynamoDBPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                Resource: !GetAtt ServerlessTemplateSomethingsTable.Arn
+
+
+  ## Shared API Gateway with CORS ##
+  
+  ServerlessRestApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: ServerlessRestApi
+      StageName: !Ref Stage
 
   ## Lambda Functions ##
   
@@ -20,11 +65,13 @@ Resources:
     Properties:
       Handler: bootstrap
       CodeUri: bin/getSomething.zip
+      Role: !GetAtt LambdaExecutionRole.Arn
       Events:
         GetSomethingApi:
           Type: Api
           Properties:
-            Path: /getSomething/{id}
+            RestApiId: !Ref ServerlessRestApi
+            Path: /api/getSomething/{id}
             Method: get
 
   PostSomethingFunction:
@@ -32,11 +79,13 @@ Resources:
     Properties:
       Handler: bootstrap
       CodeUri: bin/postSomething.zip
+      Role: !GetAtt LambdaExecutionRole.Arn
       Events:
         PostSomethingApi:
           Type: Api
           Properties:
-            Path: /postSomething
+            RestApiId: !Ref ServerlessRestApi
+            Path: /api/postSomething
             Method: post
 
   PatchSomethingFunction:
@@ -44,11 +93,13 @@ Resources:
     Properties:
       Handler: bootstrap
       CodeUri: bin/patchSomething.zip
+      Role: !GetAtt LambdaExecutionRole.Arn
       Events:
         PatchSomethingApi:
           Type: Api
           Properties:
-            Path: /patchSomething
+            RestApiId: !Ref ServerlessRestApi
+            Path: /api/patchSomething
             Method: patch
 
   DeleteSomethingFunction:
@@ -56,11 +107,13 @@ Resources:
     Properties:
       Handler: bootstrap
       CodeUri: bin/deleteSomething.zip
+      Role: !GetAtt LambdaExecutionRole.Arn
       Events:
         DeleteSomethingApi:
           Type: Api
           Properties:
-            Path: /deleteSomething/
+            RestApiId: !Ref ServerlessRestApi
+            Path: /api/deleteSomething
             Method: delete
 
   ## DynamoDB Table ##
@@ -77,7 +130,8 @@ Resources:
       KeySchema:
         - AttributeName: id
           KeyType: HASH
-        - AttributeName: name
+        - AttributeName: namey
+
           KeyType: RANGE
       BillingMode: PAY_PER_REQUEST
 

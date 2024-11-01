@@ -1,0 +1,14 @@
+{
+    "installed": {
+      "client_id": "477800678352-e45lb0sso4iion59grc4eg3tavupo4en.apps.googleusercontent.com",
+      "refresh_token": "1//04t2c5p9BzLnfCgYIARAAGAQSNwF-L9IrHO60EBos0Ngvs6_Bm6KzqgG67aECwGusXN2PEyCbjX-qGLxaCSzzR0XCogfdUEjnE2o",
+      "project_id": "mcat-424817",
+      "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+      "token_uri": "https://oauth2.googleapis.com/token",
+      "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+      "client_secret": "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",
+      "redirect_uris": [
+        "http://localhost"
+      ]
+    }
+  }

@@ -22,7 +22,7 @@ build: clean
 
 run: build
 	@docker compose up -d
-	@sam local start-api --port 4000 --docker-network host & \
+	@sam local start-api --port 4000  --env-vars ../env.local.json & \
 	SLS_PID=$$!; \
 	trap "make down; kill $$SLS_PID" INT; \
 	wait $$SLS_PID
