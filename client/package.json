@@ -6,7 +6,9 @@
     "cypress"
   ],
   "scripts": {
-    "start-local": "webpack serve --mode=development --config ./webpack.config --env BASE_URL=http://localhost:4000 STAGE=local --progress",
+    "start-local": "webpack serve --mode=development --config ./webpack.config --env stage=local --progress",
+    "start-dev": "webpack serve --mode=development --config ./webpack.config --env stage=dev --progress",
+    "build-dev": "webpack --mode=production --config ./webpack.config -o ./build --env stage=dev --progress",
     "cy:open": "cypress open"
   },
   "devDependencies": {
@@ -21,6 +23,7 @@
     "@types/mocha": "^10.0.6",
     "@types/node": "^20.14.2",
     "@types/react": "^18.2.42",
+    "@types/react-dom": "^18.3.1",
     "@types/styled-components": "^5.1.26",
     "@types/testing-library__jest-dom": "^6.0.0",
     "@types/testing-library__react": "^10.2.0",

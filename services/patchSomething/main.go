@@ -15,9 +15,8 @@ import (
 )
 
 type UpdateRequest struct {
-    Id        string `json:"id"`
-    Name      string `json:"name"`
-    NewStatus string `json:"newStatus"` // Additional attribute for updating
+    Id   string `json:"id"`
+    Name string `json:"name"`
 }
 
 var dbClient *dynamodb.Client
@@ -37,10 +36,10 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
     }
 
     // Validate that all required fields are provided
-    if updateReq.Id == "" || updateReq.Name == "" || updateReq.NewStatus == "" {
+    if updateReq.Id == "" || updateReq.Name == "" {
         return events.APIGatewayProxyResponse{
             StatusCode: 400,
-            Body:       `{"message": "Both 'id', 'name', and 'newStatus' are required in the request body"}`,
+            Body:       `{"message": "'id' and 'name' are required in the request body"}`,
         }, nil
     }
 
@@ -48,12 +47,11 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
     input := &dynamodb.UpdateItemInput{
         TableName: aws.String(tableName),
         Key: map[string]types.AttributeValue{
-            "id":   &types.AttributeValueMemberS{Value: updateReq.Id},
-            "name": &types.AttributeValueMemberS{Value: updateReq.Name},
+            "id": &types.AttributeValueMemberS{Value: updateReq.Id},
         },
-        UpdateExpression:          aws.String("SET #status = :newStatus"),
-        ExpressionAttributeNames:  map[string]string{"#status": "status"},
-        ExpressionAttributeValues: map[string]types.AttributeValue{":newStatus": &types.AttributeValueMemberS{Value: updateReq.NewStatus}},
+        UpdateExpression:          aws.String("SET #name = :name"),
+        ExpressionAttributeNames:  map[string]string{"#name": "name"},
+        ExpressionAttributeValues: map[string]types.AttributeValue{":name": &types.AttributeValueMemberS{Value: updateReq.Name}},
         ReturnValues:              types.ReturnValueUpdatedNew,
     }
 
@@ -68,7 +66,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 
     return events.APIGatewayProxyResponse{
         StatusCode: 200,
-        Body:       `{"message": "Item successfully updated"}`,
+        Body:       `{"message": "Item successfully updated!"}`,
     }, nil
 }
 

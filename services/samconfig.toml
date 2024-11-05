@@ -1,8 +1,8 @@
 version = 0.1
 [default.deploy.parameters]
-stack_name = "serverless-template"
+stack_name = "serverless-template-dev"
 resolve_s3 = true
-s3_prefix = "serverless-template"
+s3_prefix = "serverless-template-dev"
 region = "us-east-1"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM"

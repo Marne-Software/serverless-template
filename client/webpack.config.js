@@ -5,8 +5,14 @@ const webpack = require('webpack');
 
 module.exports = async (webpackEnv, argv) => {
   const stage = webpackEnv.stage || 'local'; // Default to 'local' if not specified
-  const envPath = path.join(__dirname, `../env.${stage}.json`);
-  const envConfig = JSON.parse(fs.readFileSync(envPath, 'utf-8')).Parameters;
+  let envConfig;
+
+  if (stage === 'local') {
+    envConfig = require(path.join(__dirname, '../env.local.json')).Parameters;
+  } else {
+    const getEnvFromStack = require(path.join(__dirname, '../services/getEnvFromStack'));
+    envConfig = await getEnvFromStack(stage); // Fetch environment from stack
+  }
 
   const baseConfig = {
     output: {
@@ -27,10 +33,6 @@ module.exports = async (webpackEnv, argv) => {
     plugins: [
       new HtmlWebPackPlugin({
         template: path.join(__dirname, './public/index.html'),
-        // BASE_URL: envConfig.BASE_URL,
-        // USER_POOL_ID: envConfig.USER_POOL_ID,
-        // CLIENT_ID: envConfig.CLIENT_ID,
-        // IDENTITY_POOL_ID: envConfig.IDENTITY_POOL_ID
       }),
       new webpack.DefinePlugin({
         'process.env': {
@@ -96,4 +98,4 @@ module.exports = async (webpackEnv, argv) => {
     ...baseConfig,
     mode: 'production',
   };
-}
+};

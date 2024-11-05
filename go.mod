@@ -9,8 +9,12 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.36.3
 )
 
+require github.com/aws/aws-sdk-go-v2/service/dynamodbstreams v1.24.3 // indirect
+
 require (
+	github.com/aws/aws-sdk-go v1.55.5
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.42 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.15.13
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.18 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.22 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.22 // indirect
@@ -22,5 +26,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.28.3 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.32.3 // indirect
 	github.com/aws/smithy-go v1.22.0 // indirect
+	github.com/google/uuid v1.6.0
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 )

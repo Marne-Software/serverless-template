@@ -4,7 +4,7 @@ Description: SAM Template for Local Testing with Docker
 Globals:
   Api:
     Cors:
-      AllowMethods: '''GET,POST,OPTIONS'''
+      AllowMethods: '''GET,POST,DELETE,PATCH,OPTIONS'''
       AllowHeaders: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent,X-Amzn-Trace-Id'''
       AllowOrigin: '''*'''
   Function:
@@ -13,12 +13,17 @@ Globals:
     Timeout: 30
     Environment:
       Variables:
-        STAGE: ''
+        STAGE:
+          Ref: Stage
         DYNAMODB_ENDPOINT: ''
 Parameters:
   Stage:
     Type: String
     Default: local
+    AllowedValues:
+    - dev
+    - local
+    - prod
 Resources:
   LambdaExecutionRole:
     Type: AWS::IAM::Role
@@ -41,16 +46,50 @@ Resources:
             - dynamodb:PutItem
             - dynamodb:UpdateItem
             - dynamodb:DeleteItem
+            - dynamodb:Query
             Resource:
               Fn::GetAtt:
               - ServerlessTemplateSomethingsTable
               - Arn
-  ServerlessRestApi:
+      - PolicyName: CloudWatchLogsPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: arn:aws:logs:*:*:*
+  ServerlessTemplateRestApi:
     Type: AWS::Serverless::Api
     Properties:
-      Name: ServerlessRestApi
+      Name:
+        Fn::Sub: serverless-template-${Stage}
       StageName:
         Ref: Stage
+      AccessLogSetting:
+        DestinationArn:
+          Fn::GetAtt:
+          - ApiGatewayLogGroup
+          - Arn
+        Format: '{ "requestId":"$context.requestId", "ip": "$context.identity.sourceIp",
+          "caller": "$context.identity.caller", "user": "$context.identity.user",
+          "requestTime": "$context.requestTime", "httpMethod": "$context.httpMethod",
+          "resourcePath": "$context.resourcePath", "status": "$context.status", "protocol":
+          "$context.protocol", "responseLength": "$context.responseLength" }'
+      MethodSettings:
+      - DataTraceEnabled: true
+        HttpMethod: '*'
+        LoggingLevel: INFO
+        ResourcePath: /*
+        MetricsEnabled: true
+  ApiGatewayLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName:
+        Fn::Sub: /aws/apigateway/serverlessTemplateApi-${Stage}
+      RetentionInDays: 7
   GetSomethingFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -65,9 +104,15 @@ Resources:
           Type: Api
           Properties:
             RestApiId:
-              Ref: ServerlessRestApi
-            Path: /api/getSomething/{id}
+              Ref: ServerlessTemplateRestApi
+            Path: /api/something/{id}
             Method: get
+  GetSomethingFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName:
+        Fn::Sub: /aws/lambda/serverlessTemplateGetSomethingFunction-${Stage}
+      RetentionInDays: 7
   PostSomethingFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -82,9 +127,15 @@ Resources:
           Type: Api
           Properties:
             RestApiId:
-              Ref: ServerlessRestApi
-            Path: /api/postSomething
+              Ref: ServerlessTemplateRestApi
+            Path: /api/something
             Method: post
+  PostSomethingFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName:
+        Fn::Sub: /aws/lambda/serverlessTemplatePostSomethingFunction-${Stage}
+      RetentionInDays: 7
   PatchSomethingFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -99,9 +150,15 @@ Resources:
           Type: Api
           Properties:
             RestApiId:
-              Ref: ServerlessRestApi
-            Path: /api/patchSomething
+              Ref: ServerlessTemplateRestApi
+            Path: /api/something
             Method: patch
+  PatchSomethingFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName:
+        Fn::Sub: /aws/lambda/serverlessTemplatePatchSomethingFunction-${Stage}
+      RetentionInDays: 7
   DeleteSomethingFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -116,26 +173,122 @@ Resources:
           Type: Api
           Properties:
             RestApiId:
-              Ref: ServerlessRestApi
-            Path: /api/deleteSomething
+              Ref: ServerlessTemplateRestApi
+            Path: /api/something/{id}
             Method: delete
+  DeleteSomethingFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName:
+        Fn::Sub: /aws/lambda/serverlessTemplateDeleteSomethingFunction-${Stage}
+      RetentionInDays: 7
   ServerlessTemplateSomethingsTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: serverlessTemplateSomethingsTable-local
+      TableName:
+        Fn::Sub: serverlessTemplateSomethingsTable-${Stage}
       AttributeDefinitions:
       - AttributeName: id
-        AttributeType: S
-      - AttributeName: name
         AttributeType: S
       KeySchema:
       - AttributeName: id
         KeyType: HASH
-      - AttributeName: namey
-        KeyType: RANGE
       BillingMode: PAY_PER_REQUEST
+  FrontendBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        Fn::Sub: serverless-template-frontend-${Stage}
+      OwnershipControls:
+        Rules:
+        - ObjectOwnership: BucketOwnerEnforced
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: false
+        RestrictPublicBuckets: false
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: error.html
+      Tags:
+      - Key: Environment
+        Value:
+          Ref: Stage
+  FrontendBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket:
+        Ref: FrontendBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal: '*'
+          Action: s3:GetObject
+          Resource:
+            Fn::Sub: ${FrontendBucket.Arn}/*
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Origins:
+        - DomainName:
+            Fn::GetAtt:
+            - FrontendBucket
+            - DomainName
+          Id: S3Origin
+          CustomOriginConfig:
+            OriginProtocolPolicy: http-only
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods:
+          - GET
+          - HEAD
+          - OPTIONS
+          CachedMethods:
+          - GET
+          - HEAD
+          ForwardedValues:
+            QueryString: false
+            Cookies:
+              Forward: none
+        ViewerCertificate:
+          AcmCertificateArn: arn:aws:acm:us-east-1:827183242253:certificate/9790a1b0-99d3-4fbb-a45e-2de60e2defb2
+          SslSupportMethod: sni-only
+        DefaultRootObject: index.html
+        PriceClass: PriceClass_100
+        Aliases:
+        - serverless-template.marneinnovationcenter.com
+  ServerlessTemplateRecordSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: marneinnovationcenter.com.
+      Name: serverless-template.marneinnovationcenter.com.
+      Type: A
+      AliasTarget:
+        DNSName:
+          Fn::GetAtt:
+          - CloudFrontDistribution
+          - DomainName
+        HostedZoneId: Z2FDTNDATAQYW2
 Outputs:
   ApiUrl:
     Value:
-      Fn::Sub: https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}/
+      Fn::Sub: https://${ServerlessTemplateRestApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}/
     Description: API Gateway endpoint URL
+  WebsiteURL:
+    Value:
+      Fn::Sub: https://serverless-template.marneinnovationcenter.com
+    Description: URL for the static website hosted on S3 and served via CloudFront
+  CloudFrontDomainName:
+    Value:
+      Fn::GetAtt:
+      - CloudFrontDistribution
+      - DomainName
+    Description: Domain name for the CloudFront distribution
+  Route53Record:
+    Value:
+      Ref: ServerlessTemplateRecordSet
+    Description: Route 53 record for the subdomain serverless-template.marneinnovationcenter.com

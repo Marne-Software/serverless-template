@@ -1,72 +1,71 @@
 package main
 
 import (
-    "context"
-    "encoding/json"
-    "fmt"
-    "os"
+	"context"
+	"fmt"
+	"os"
 
-    "github.com/Marne-Software/serverless-template/services/helpers"
-    "github.com/aws/aws-lambda-go/events"
-    "github.com/aws/aws-lambda-go/lambda"
-    "github.com/aws/aws-sdk-go-v2/aws"
-    "github.com/aws/aws-sdk-go-v2/service/dynamodb"
-    "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"github.com/Marne-Software/serverless-template/services/helpers"
+	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
-type DeleteRequest struct {
-    Id   string `json:"id"`
-    Name string `json:"name"`
+type Something struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 var dbClient *dynamodb.Client
 
 func init() {
-    dbClient = helpers.InitializeDynamoDBClient()
+	dbClient = helpers.InitializeDynamoDBClient()
 }
 
 func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-    var deleteReq DeleteRequest
-    if err := json.Unmarshal([]byte(request.Body), &deleteReq); err != nil {
-        fmt.Println("Error unmarshaling request body:", err)
-        return events.APIGatewayProxyResponse{
-            StatusCode: 400,
-            Body:       `{"message": "Invalid request body"}`,
-        }, nil
-    }
+	headers := helpers.GetDefaultHeaders()
+	stage := os.Getenv("STAGE")
 
-    // Check if both id and name are provided
-    if deleteReq.Id == "" || deleteReq.Name == "" {
-        return events.APIGatewayProxyResponse{
-            StatusCode: 400,
-            Body:       `{"message": "Both 'id' and 'name' are required in the request body"}`,
-        }, nil
-    }
+	// Retrieve the id from the path parameters
+	id, exists := request.PathParameters["id"]
+	if !exists || id == "" {
+		fmt.Println("ID not provided in path parameters")
+		return events.APIGatewayProxyResponse{
+			StatusCode: 400,
+			Headers:    headers,
+			Body:       `{"message": "ID not provided in path parameters"}`,
+		}, nil
+	}
 
-    tableName := "serverlessTemplateSomethingsTable-" + os.Getenv("STAGE")
-    input := &dynamodb.DeleteItemInput{
-        TableName: aws.String(tableName),
-        Key: map[string]types.AttributeValue{
-            "id":   &types.AttributeValueMemberS{Value: deleteReq.Id},
-            "name": &types.AttributeValueMemberS{Value: deleteReq.Name},
-        },
-    }
+	// Set up DynamoDB delete item input
+	input := &dynamodb.DeleteItemInput{
+		TableName: aws.String("serverlessTemplateSomethingsTable-" + stage),
+		Key: map[string]types.AttributeValue{
+			"id": &types.AttributeValueMemberS{Value: id},
+		},
+	}
 
-    _, err := dbClient.DeleteItem(ctx, input)
-    if err != nil {
-        fmt.Printf("Failed to delete item: %v\n", err)
-        return events.APIGatewayProxyResponse{
-            StatusCode: 500,
-            Body:       `{"message": "Failed to delete item"}`,
-        }, err
-    }
+	// Execute the DynamoDB delete operation
+	_, err := dbClient.DeleteItem(ctx, input)
+	if err != nil {
+		fmt.Printf("Failed to delete item: %v\n", err)
+		return events.APIGatewayProxyResponse{
+			StatusCode: 500,
+			Headers:    headers,
+			Body:       `{"message": "Failed to delete item"}`,
+		}, err
+	}
 
-    return events.APIGatewayProxyResponse{
-        StatusCode: 200,
-        Body:       `{"message": "Item successfully deleted"}`,
-    }, nil
+	// Successful deletion response
+	return events.APIGatewayProxyResponse{
+		Headers:    headers,
+		StatusCode: 200,
+		Body:       `{"message": "Item successfully deleted!"}`,
+	}, nil
 }
 
 func main() {
-    lambda.Start(handler)
+	lambda.Start(handler)
 }
