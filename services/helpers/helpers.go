@@ -34,9 +34,11 @@ func InitializeDynamoDBClient() *dynamodb.Client {
 // GetDefaultHeaders returns a map of common headers to be used in Lambda functions.
 func GetDefaultHeaders() map[string]string {
 	return map[string]string{
-		"Content-Type":                  "application/json",
-		"Access-Control-Allow-Origin":   "*",                                                       // Allow requests from any origin (change as needed)
-		"Access-Control-Allow-Headers":  "Content-Type", // Add other allowed headers if needed
-		"Access-Control-Allow-Methods":  "GET,POST,OPTIONS",
+		"Content-Type":                 "application/json",
+		"Access-Control-Allow-Origin":  "*",
+		"Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+		"Access-Control-Allow-Methods": "GET,POST,DELETE,PATCH,OPTIONS",
+		"Access-Control-Expose-Headers": "Authorization",  
+		"Cache-Control":                "no-cache",      
 	}
 }

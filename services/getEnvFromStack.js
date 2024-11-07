@@ -26,8 +26,15 @@ async function getEnvFromStack(stage) {
     }
     apiUrl = `${apiUrl}api`; // Append `/api` to the URL
 
-    // Return API_URL and STAGE
-    return { API_URL: apiUrl, STAGE: stage };
+    // Get the CloudFront Distribution ID
+    const distributionId = outputs.find(output => output.OutputKey === 'CloudFrontDistributionId')?.OutputValue;
+    if (!distributionId) {
+      console.warn("CloudFrontDistributionId output key not found in stack outputs.");
+      return {};
+    }
+
+    // Return API_URL, STAGE, and DISTRIBUTION_ID
+    return { API_URL: apiUrl, STAGE: stage, DISTRIBUTION_ID: distributionId };
   } catch (error) {
     console.error("Error fetching stack outputs:", error);
     throw error;

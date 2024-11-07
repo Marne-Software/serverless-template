@@ -1,8 +1,11 @@
+APP_NAME_DASHED := serverless-template#use kebob case
+
 functionNames := \
+	invalidationControl \
 	getSomething \
-    patchSomething \
-    deleteSomething \
-    postSomething 
+	patchSomething \
+	deleteSomething \
+	postSomething 
 
 clean:
 	@rm -rf ./bin 
@@ -22,7 +25,7 @@ build: clean
 seed-local:
 	@echo "Seeding local DynamoDB table..."
 	@aws dynamodb create-table \
-		--table-name serverlessTemplateSomethingsTable-local \
+		--table-name $(APP_NAME)SomethingsTable-local \
 		--attribute-definitions AttributeName=id,AttributeType=S \
 		--key-schema AttributeName=id,KeyType=HASH \
 		--billing-mode PAY_PER_REQUEST \
@@ -30,7 +33,7 @@ seed-local:
 
 run: build
 	@docker compose up -d
-	@sleep 2 # Wait briefly to ensure DynamoDB is ready
+	@sleep
 	@make seed-local
 	@rm -rf .aws-sam
 	@sam build
@@ -44,12 +47,15 @@ down:
 	@rm -rf ./docker/dynamodb
 
 # DEPLOY COMMANDS
-deploy-dev:
+deploy-services-dev: build
 	@rm -rf .aws-sam
 	@sam build
-	@sam deploy --stack-name serverless-template-dev --parameter-overrides Stage=dev 
-	# @aws s3 sync ../client/build s3://serverless-template-frontend-dev --delete --no-verify-ssl
+	@sam deploy --stack-name "$(APP_NAME_DASHED)-dev" --parameter-overrides Stage=dev --capabilities CAPABILITY_NAMED_IAM
 
+deploy-client-dev:
+	@cd ../client && npm run build-dev
+	@aws s3 sync ../client/build "s3://$(APP_NAME_DASHED)-dev-frontend" --delete --no-verify-ssl
 
-
-
+ deploy-dev:
+	make deploy-services-dev
+	make deploy-client-dev

@@ -27,10 +27,13 @@ func init() {
 
 func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	var req Request
+	headers := helpers.GetDefaultHeaders()
+
 	if err := json.Unmarshal([]byte(request.Body), &req); err != nil {
 		fmt.Println("Error unmarshaling request body:", err)
 		return events.APIGatewayProxyResponse{
 			StatusCode: 400,
+			Headers:    headers,
 			Body:       `{"message": "Invalid request body"}`,
 		}, err
 	}
@@ -44,9 +47,9 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 	fmt.Printf("Request Name: %s\n", req.Name)
 
 	stage := os.Getenv("STAGE")
-	fmt.Printf("Table: %s\n", "serverlessTemplateSomethingsTable-"+stage	)
+	fmt.Printf("Table: %s\n", "serverlessTemplate-" + stage + "-somethingsTable")
 	input := &dynamodb.PutItemInput{
-		TableName: aws.String("serverlessTemplateSomethingsTable-" + stage),
+		TableName: aws.String("serverlessTemplate-" + stage + "-somethingsTable"),
 		Item: map[string]types.AttributeValue{
 			"id":   &types.AttributeValueMemberS{Value: req.Id},
 			"name": &types.AttributeValueMemberS{Value: req.Name},
@@ -58,12 +61,14 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		fmt.Printf("Raw error response: %v\n", err)
 		return events.APIGatewayProxyResponse{
 			StatusCode: 500,
+			Headers:    headers,
 			Body:       `{"message": "Failed to put item"}`,
 		}, err
 	}
 
 	return events.APIGatewayProxyResponse{
 		StatusCode: 200,
+		Headers:    headers,
 		Body:       `{"message": "Item successfully added!"}`,
 	}, nil
 }

@@ -43,7 +43,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 
 	// Set up DynamoDB query input
 	input := &dynamodb.QueryInput{
-		TableName:              aws.String("serverlessTemplateSomethingsTable-" + stage),
+		TableName:              aws.String("serverlessTemplate-" + stage + "-somethingsTable" ),
 		KeyConditionExpression: aws.String("id = :id"),
 		ExpressionAttributeValues: map[string]types.AttributeValue{
 			":id": &types.AttributeValueMemberS{Value: id},

@@ -1,12 +1,12 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: 'AWS::Serverless-2016-10-31'
-Description: SAM Template for Local Testing with Docker
+Description: SAM Template for Deployment and Local Testing with Docker
 
 Globals:
   Api:
     Cors:
       AllowMethods: "'GET,POST,DELETE,PATCH,OPTIONS'"
-      AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent,X-Amzn-Trace-Id'"
+      AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
       AllowOrigin: "'*'"
   Function:
     Runtime: provided.al2023
@@ -25,11 +25,75 @@ Parameters:
       - dev
       - local
       - prod
+  AppName:
+    Type: String
+    Default: "serverlessTemplate" # Put app name here in camel case
+  AppNameDashed:
+    Type: String
+    Default: "serverless-template" # Put app name here in kebab case
 
-Resources:
+Resources: 
 
-  ## IAM Role for Lambda Functions with Logging Permissions ##
-  LambdaExecutionRole:
+  InvalidatePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub "${AppName}-${Stage}-InvalidatePolicy"
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - cloudfront:CreateInvalidation
+            Resource: "*"
+
+  DynamoDBPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub "${AppName}-${Stage}-DynamoDBPolicy"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - dynamodb:GetItem
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+              - dynamodb:DeleteItem
+              - dynamodb:Query
+            Resource: !GetAtt SomethingsTable.Arn
+
+  CloudWatchLogsPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub "${AppName}-${Stage}-CloudWatchLogsPolicy"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: "arn:aws:logs:*:*:*"
+
+  InvalidateRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AppName}-${Stage}-invalidateRole"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - !Ref InvalidatePolicy
+        - !Ref CloudWatchLogsPolicy
+
+  LambdaApiExecutionRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -37,40 +101,38 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
-      Policies:
-        - PolicyName: LambdaDynamoDBPolicy
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - dynamodb:GetItem
-                  - dynamodb:PutItem
-                  - dynamodb:UpdateItem
-                  - dynamodb:DeleteItem
-                  - dynamodb:Query
-                Resource: !GetAtt ServerlessTemplateSomethingsTable.Arn
-        - PolicyName: CloudWatchLogsPolicy
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                Resource: "arn:aws:logs:*:*:*"
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - !Ref DynamoDBPolicy
+        - !Ref CloudWatchLogsPolicy
 
-  ## API Gateway with CORS and Logging ##
-  ServerlessTemplateRestApi:
+  InvalidationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${AppName}-${Stage}-invalidationControl"
+      Handler: bootstrap
+      CodeUri: bin/invalidationControl.zip
+      Role: !GetAtt InvalidateRole.Arn
+      Environment:
+        Variables:
+          DISTRIBUTION_ID: !ImportValue CloudFrontDistributionId 
+      Events:
+        S3Event:
+          Type: S3
+          Properties:
+            Bucket: !Ref FrontendBucket   
+            Events: s3:ObjectCreated:*
+
+  RestApi:
     Type: AWS::Serverless::Api
     Properties:
-      Name: !Sub "serverless-template-${Stage}"
+      Name: !Sub "${AppName}-${Stage}-api"
       StageName: !Ref Stage
       AccessLogSetting:
-        DestinationArn: !GetAtt ApiGatewayLogGroup.Arn
+        DestinationArn: !GetAtt ApiLogGroup.Arn
         Format: '{ "requestId":"$context.requestId", "ip": "$context.identity.sourceIp", "caller": "$context.identity.caller", "user": "$context.identity.user", "requestTime": "$context.requestTime", "httpMethod": "$context.httpMethod", "resourcePath": "$context.resourcePath", "status": "$context.status", "protocol": "$context.protocol", "responseLength": "$context.responseLength" }'
       MethodSettings:
         - DataTraceEnabled: true
@@ -79,80 +141,76 @@ Resources:
           ResourcePath: "/*"
           MetricsEnabled: true
 
-  ## CloudWatch Log Group for API Gateway Logs ##
-  ApiGatewayLogGroup:
+  ApiLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub "/aws/apigateway/serverlessTemplateApi-${Stage}"
+      LogGroupName: !Sub "/aws/apigateway/${AppName}-${Stage}-api"
       RetentionInDays: 7
 
-## Lambda Functions with Logging Enabled ##
   GetSomethingFunction:
     Type: AWS::Serverless::Function
     Properties:
+      FunctionName: !Sub "${AppName}-${Stage}-getSomethingFunction"
       Handler: bootstrap
       CodeUri: bin/getSomething.zip
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Role: !GetAtt LambdaApiExecutionRole.Arn
       Events:
         GetSomethingApi:
           Type: Api
           Properties:
-            RestApiId: !Ref ServerlessTemplateRestApi
+            RestApiId: !Ref RestApi
             Path: /api/something/{id}
             Method: get
 
   PostSomethingFunction:
     Type: AWS::Serverless::Function
     Properties:
+      FunctionName: !Sub "${AppName}-${Stage}-postSomethingFunction"
       Handler: bootstrap
       CodeUri: bin/postSomething.zip
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Role: !GetAtt LambdaApiExecutionRole.Arn
       Events:
         PostSomethingApi:
           Type: Api
           Properties:
-            RestApiId: !Ref ServerlessTemplateRestApi
+            RestApiId: !Ref RestApi
             Path: /api/something
             Method: post
 
   PatchSomethingFunction:
     Type: AWS::Serverless::Function
     Properties:
+      FunctionName: !Sub "${AppName}-${Stage}-patchSomethingFunction"
       Handler: bootstrap
       CodeUri: bin/patchSomething.zip
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Role: !GetAtt LambdaApiExecutionRole.Arn
       Events:
         PatchSomethingApi:
           Type: Api
           Properties:
-            RestApiId: !Ref ServerlessTemplateRestApi
+            RestApiId: !Ref RestApi
             Path: /api/something
             Method: patch
-            
+
   DeleteSomethingFunction:
     Type: AWS::Serverless::Function
     Properties:
+      FunctionName: !Sub "${AppName}-${Stage}-deleteSomethingFunction"
       Handler: bootstrap
       CodeUri: bin/deleteSomething.zip
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Role: !GetAtt LambdaApiExecutionRole.Arn
       Events:
         DeleteSomethingApi:
           Type: Api
           Properties:
-            RestApiId: !Ref ServerlessTemplateRestApi
+            RestApiId: !Ref RestApi
             Path: /api/something/{id}
             Method: delete
-  DeleteSomethingFunctionLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub "/aws/lambda/serverlessTemplateDeleteSomethingFunction-${Stage}"
-      RetentionInDays: 7
 
-  ## DynamoDB Table ##
-  ServerlessTemplateSomethingsTable:
+  SomethingsTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub "serverlessTemplateSomethingsTable-${Stage}"
+      TableName: !Sub "${AppName}-${Stage}-somethingsTable"
       AttributeDefinitions:
         - AttributeName: id
           AttributeType: S
@@ -161,12 +219,10 @@ Resources:
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
   
-  ## FRONTEND ##
-
   FrontendBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub "serverless-template-frontend-${Stage}"
+      BucketName: !Sub "${AppNameDashed}-${Stage}-frontend"
       OwnershipControls:
         Rules:
           - ObjectOwnership: BucketOwnerEnforced
@@ -194,14 +250,13 @@ Resources:
             Action: "s3:GetObject"
             Resource: !Sub "${FrontendBucket.Arn}/*"
 
-    ## CloudFront Distribution ##
   CloudFrontDistribution:
     Type: AWS::CloudFront::Distribution
     Properties:
       DistributionConfig:
         Enabled: true
         Origins:
-          - DomainName: !GetAtt FrontendBucket.DomainName  # Reference to S3 bucket domain
+          - DomainName: !GetAtt FrontendBucket.DomainName
             Id: S3Origin
             CustomOriginConfig:
               OriginProtocolPolicy: http-only
@@ -225,28 +280,33 @@ Resources:
         DefaultRootObject: index.html
         PriceClass: PriceClass_100
         Aliases:
-          - serverless-template.marneinnovationcenter.com
+          - !Sub "${AppNameDashed}-${Stage}.marneinnovationcenter.com"
 
-  ServerlessTemplateRecordSet:
-      Type: AWS::Route53::RecordSet
-      Properties:
-        HostedZoneName: "marneinnovationcenter.com."  # Make sure to include the trailing dot
-        Name: "serverless-template.marneinnovationcenter.com."
-        Type: A
-        AliasTarget:
-          DNSName: !GetAtt CloudFrontDistribution.DomainName
-          HostedZoneId: Z2FDTNDATAQYW2  # This is the fixed CloudFront hosted zone ID for all distributions
+  RecordSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: "marneinnovationcenter.com."
+      Name: !Sub "${AppNameDashed}-${Stage}.marneinnovationcenter.com."
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt CloudFrontDistribution.DomainName
+        HostedZoneId: Z2FDTNDATAQYW2
 
 Outputs:
   ApiUrl:
-    Value: !Sub "https://${ServerlessTemplateRestApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}/"
+    Value: !Sub "https://${RestApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}/"
     Description: "API Gateway endpoint URL"
   WebsiteURL:
-    Value: !Sub "https://serverless-template.marneinnovationcenter.com"
+    Value: !Sub "https://${AppNameDashed}-${Stage}.marneinnovationcenter.com"
     Description: "URL for the static website hosted on S3 and served via CloudFront"
+  CloudFrontDistributionId:
+    Value: !Ref CloudFrontDistribution
+    Description: "CloudFront Distribution ID"
+    Export:
+      Name: "CloudFrontDistributionId"
   CloudFrontDomainName:
     Value: !GetAtt CloudFrontDistribution.DomainName
     Description: "Domain name for the CloudFront distribution"
   Route53Record:
-    Value: !Ref ServerlessTemplateRecordSet
-    Description: "Route 53 record for the subdomain serverless-template.marneinnovationcenter.com"
+    Value: !Ref RecordSet
+    Description: "Route 53 record for the subdomain ${AppNameDashed}-${Stage}.marneinnovationcenter.com"

@@ -41,7 +41,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 
 	// Set up DynamoDB delete item input
 	input := &dynamodb.DeleteItemInput{
-		TableName: aws.String("serverlessTemplateSomethingsTable-" + stage),
+		TableName: aws.String("serverlessTemplate-" + stage + "-somethingsTable" ),
 		Key: map[string]types.AttributeValue{
 			"id": &types.AttributeValueMemberS{Value: id},
 		},

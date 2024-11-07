@@ -26,6 +26,9 @@ func init() {
 }
 
 func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+    stage := os.Getenv("STAGE")
+    headers := helpers.GetDefaultHeaders()
+
     var updateReq UpdateRequest
     if err := json.Unmarshal([]byte(request.Body), &updateReq); err != nil {
         fmt.Println("Error unmarshaling request body:", err)
@@ -38,12 +41,13 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
     // Validate that all required fields are provided
     if updateReq.Id == "" || updateReq.Name == "" {
         return events.APIGatewayProxyResponse{
+            Headers: headers,
             StatusCode: 400,
             Body:       `{"message": "'id' and 'name' are required in the request body"}`,
         }, nil
     }
 
-    tableName := "serverlessTemplateSomethingsTable-" + os.Getenv("STAGE")
+    tableName := "serverlessTemplate-" + stage + "-somethingsTable" 
     input := &dynamodb.UpdateItemInput{
         TableName: aws.String(tableName),
         Key: map[string]types.AttributeValue{
@@ -59,12 +63,14 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
     if err != nil {
         fmt.Printf("Failed to update item: %v\n", err)
         return events.APIGatewayProxyResponse{
+            Headers: headers,
             StatusCode: 500,
             Body:       `{"message": "Failed to update item"}`,
         }, err
     }
 
     return events.APIGatewayProxyResponse{
+        Headers: headers,
         StatusCode: 200,
         Body:       `{"message": "Item successfully updated!"}`,
     }, nil
