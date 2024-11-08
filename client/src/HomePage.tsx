@@ -10,7 +10,7 @@ const HomePageContainer = styled(FlexCol)`
 `;
 
 function HomePage() {
-  const { setIsAuthenticated } = useAuth(); // Get the setIsAuthenticated function
+  const { setIsAuthenticated, fetchHelper } = useAuth(); // Get the fetchHelper and setIsAuthenticated function
   const [something, setSomething] = useState<{ id: string; name: string }>({
     id: "",
     name: "N/A",
@@ -18,27 +18,12 @@ function HomePage() {
   const [message, setMessage] = useState<string>("N/A");
   const navigate = useNavigate(); // Get the navigate function
 
-  const HomePageContainer = styled(FlexCol)`
-    height: 100%;
-`;
-
   const fetchData = async () => {
     try {
-      const response = await fetch(
+      const result = await fetchHelper(
         `${process.env.API_URL}/something/f0c19de7-1aef-4a66-9a83-c15bd7b232e0`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
+        'GET'
       );
-
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status} ${response.statusText}`);
-      }
-
-      const result = await response.json();
       console.log("res: ", result);
       setSomething(result[0]);
     } catch (error) {
@@ -49,27 +34,17 @@ function HomePage() {
 
   const deleteData = async () => {
     try {
-      const response = await fetch(
+      const result = await fetchHelper(
         `${process.env.API_URL}/something/f0c19de7-1aef-4a66-9a83-c15bd7b232e0`,
-        {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
+        'DELETE'
       );
 
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status} ${response.statusText}`);
-      }
-
-      const result = await response.json();
       setMessage(result.message);
       setSomething({ id: "", name: "N/A" });
       fetchData();
     } catch (error) {
       setMessage(error.message);
-      console.error("Error fetching data:", error);
+      console.error("Error deleting data:", error);
     }
   };
 
@@ -80,19 +55,7 @@ function HomePage() {
     const name = formData.get("name") as string; // Safely get the 'name' field value
 
     try {
-      const response = await fetch(`${process.env.API_URL}/something`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ name }), // Use the extracted name here
-      });
-
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status} ${response.statusText}`);
-      }
-
-      const result = await response.json();
+      const result = await fetchHelper(`${process.env.API_URL}/something`, 'POST', { name });
       setMessage(result.message);
       fetchData();
     } catch (error) {
@@ -107,27 +70,15 @@ function HomePage() {
     const name = formData.get("name") as string; // Safely get the 'name' field value
 
     try {
-      const response = await fetch(`${process.env.API_URL}/something`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          id: "f0c19de7-1aef-4a66-9a83-c15bd7b232e0",
-          name,
-        }), // Use the extracted name here
+      const result = await fetchHelper(`${process.env.API_URL}/something`, 'PATCH', {
+        id: "f0c19de7-1aef-4a66-9a83-c15bd7b232e0",
+        name,
       });
-
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status} ${response.statusText}`);
-      }
-
-      const result = await response.json();
       console.log("res: ", result);
       setMessage(result.message);
       fetchData();
     } catch (error) {
-      console.error("Error posting data:", error);
+      console.error("Error updating data:", error);
     }
   };
 
@@ -156,7 +107,7 @@ function HomePage() {
       </div>
       <br />
       {something.name === "N/A" ? (
-        <form onSubmit={(e) => postData(e)}>
+        <form onSubmit={postData}>
           <label>
             <strong>Name:</strong>
             <input type="text" name="name" required />
@@ -165,7 +116,7 @@ function HomePage() {
         </form>
       ) : (
         <FlexRow>
-          <form onSubmit={(e) => patchSomething(e)}>
+          <form onSubmit={patchSomething}>
             <label>
               <strong>Name:</strong>
               <input type="text" name="name" required />

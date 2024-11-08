@@ -175,6 +175,15 @@ Resources:
         Fn::Sub: ${AppName}-${Stage}-api
       StageName:
         Ref: Stage
+      Auth:
+        Authorizers:
+          CognitoAuthorizer:
+            UserPoolArn:
+              Fn::GetAtt:
+              - userPool
+              - Arn
+            Identity:
+              Header: method.request.header.Authorization
       AccessLogSetting:
         DestinationArn:
           Fn::GetAtt:
@@ -216,6 +225,8 @@ Resources:
               Ref: RestApi
             Path: /api/something/{id}
             Method: get
+            Auth:
+              Authorizer: CognitoAuthorizer
   PostSomethingFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -235,6 +246,8 @@ Resources:
               Ref: RestApi
             Path: /api/something
             Method: post
+            Auth:
+              Authorizer: CognitoAuthorizer
   PatchSomethingFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -254,6 +267,8 @@ Resources:
               Ref: RestApi
             Path: /api/something
             Method: patch
+            Auth:
+              Authorizer: CognitoAuthorizer
   DeleteSomethingFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -273,6 +288,8 @@ Resources:
               Ref: RestApi
             Path: /api/something/{id}
             Method: delete
+            Auth:
+              Authorizer: CognitoAuthorizer
   SomethingsTable:
     Type: AWS::DynamoDB::Table
     Properties:
