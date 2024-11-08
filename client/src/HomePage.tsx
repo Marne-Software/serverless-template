@@ -1,13 +1,22 @@
 import React, { useEffect, useState } from "react";
 import { FlexCol, FlexRow } from "./Styles";
 import styled from "styled-components";
+import { signOut } from "aws-amplify/auth";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "./Auth/AuthContext"; // Import the authentication context
+
+const HomePageContainer = styled(FlexCol)`
+  height: 100%;
+`;
 
 function HomePage() {
+  const { setIsAuthenticated } = useAuth(); // Get the setIsAuthenticated function
   const [something, setSomething] = useState<{ id: string; name: string }>({
     id: "",
     name: "N/A",
   });
   const [message, setMessage] = useState<string>("N/A");
+  const navigate = useNavigate(); // Get the navigate function
 
   const HomePageContainer = styled(FlexCol)`
     height: 100%;
@@ -122,15 +131,30 @@ function HomePage() {
     }
   };
 
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      console.log("User signed out successfully.");
+      setIsAuthenticated(false); // Update the authentication state
+      navigate("/login"); // Redirect to login after sign-out
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  };
+
   useEffect(() => {
     fetchData();
   }, []);
 
   return (
     <HomePageContainer>
-      <div><strong>Message:</strong> {message}</div>
-      <div><strong>Current Something Name:</strong> {something?.name}</div>
-      <br/>
+      <div>
+        <strong>Message:</strong> {message}
+      </div>
+      <div>
+        <strong>Current Something Name:</strong> {something?.name}
+      </div>
+      <br />
       {something.name === "N/A" ? (
         <form onSubmit={(e) => postData(e)}>
           <label>
@@ -153,9 +177,12 @@ function HomePage() {
           </button>
         </FlexRow>
       )}
+      <button type="button" onClick={handleSignOut}>
+        Log Out
+      </button>{" "}
+      {/* Log out button */}
     </HomePageContainer>
   );
-  
 }
 
 export default HomePage;

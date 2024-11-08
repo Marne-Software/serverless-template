@@ -33,8 +33,27 @@ async function getEnvFromStack(stage) {
       return {};
     }
 
-    // Return API_URL, STAGE, and DISTRIBUTION_ID
-    return { API_URL: apiUrl, STAGE: stage, DISTRIBUTION_ID: distributionId };
+    // Get the User Pool ID and Client ID
+    const userPoolId = outputs.find(output => output.OutputKey === 'userPoolId')?.OutputValue;
+    if (!userPoolId) {
+      console.warn("userPoolId output key not found in stack outputs.");
+      return {};
+    }
+
+    const userPoolClientId = outputs.find(output => output.OutputKey === 'userPoolClientId')?.OutputValue;
+    if (!userPoolClientId) {
+      console.warn("userPoolClientId output key not found in stack outputs.");
+      return {};
+    }
+
+    // Return the configuration values with mapped keys
+    return {
+      API_URL: apiUrl,
+      STAGE: stage,
+      DISTRIBUTION_ID: distributionId,
+      USER_POOL_ID: userPoolId,
+      CLIENT_ID: userPoolClientId,
+    };
   } catch (error) {
     console.error("Error fetching stack outputs:", error);
     throw error;

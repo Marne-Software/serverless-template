@@ -108,6 +108,42 @@ Resources:
       ManagedPolicyArns:
         - !Ref DynamoDBPolicy
         - !Ref CloudWatchLogsPolicy
+  
+  userPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub "${AppName}-${Stage}-userPool"
+      UsernameAttributes:
+        - email
+      Schema:
+        - Name: email
+          AttributeDataType: String
+          Required: true
+          Mutable: true
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 6
+      AutoVerifiedAttributes: 
+        - email
+      EmailConfiguration:
+        EmailSendingAccount: DEVELOPER
+        SourceArn: arn:aws:ses:us-east-1:827183242253:identity/marneinnovationcenter.com
+        ReplyToEmailAddress: admin@marneinnovationcenter.com
+        From: admin@marneinnovationcenter.com
+      VerificationMessageTemplate:
+        DefaultEmailOption: CONFIRM_WITH_LINK
+  
+  userPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Sub "${AppNameDashed}-${Stage}"  # Set the domain based on the stage (local, dev, prod)
+      UserPoolId: !Ref userPool
+
+  userPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub "${AppName}-${Stage}-userPoolClient"
+      UserPoolId: !Ref userPool
 
   InvalidationFunction:
     Type: AWS::Serverless::Function
@@ -293,6 +329,14 @@ Resources:
         HostedZoneId: Z2FDTNDATAQYW2
 
 Outputs:
+  userPoolId:
+    Value: !Ref userPool
+    Export:
+      Name: userPoolId
+  userPoolClientId:
+    Value: !Ref userPoolClient
+    Export:
+      Name: userPoolClientId
   ApiUrl:
     Value: !Sub "https://${RestApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}/"
     Description: "API Gateway endpoint URL"

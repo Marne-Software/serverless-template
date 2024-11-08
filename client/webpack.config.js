@@ -39,6 +39,8 @@ module.exports = async (webpackEnv, argv) => {
           STAGE: JSON.stringify(envConfig.STAGE),
           DYNAMODB_ENDPOINT: JSON.stringify(envConfig.DYNAMODB_ENDPOINT),
           API_URL: JSON.stringify(envConfig.API_URL),
+          USER_POOL_ID: JSON.stringify(envConfig.USER_POOL_ID),
+          CLIENT_ID: JSON.stringify(envConfig.CLIENT_ID),
         }
       })
     ],
