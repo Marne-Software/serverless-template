@@ -2,31 +2,21 @@
 @import "normalize.css";
 
 html {
-  min-height: 934px;
-  min-width: 1350px; /* Minimum width for horizontal scrolling */
+  width: 100%;
   height: 100%;
-  /* overflow-x: auto;  */
-  /* Enable horizontal scrolling */
 }
 
 body {
   height: 100%;
-  margin: 0; /* Remove default margin */
+  width: 100%;
 }
 
 #root {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
   'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
   sans-serif;
--webkit-font-smoothing: antialiased;
--moz-osx-font-smoothing: grayscale;
   height: 100%;
   box-sizing: border-box;
   background: radial-gradient(closest-side at 50% 50%, #FFFFFF 0%, #F2F2F2 57%, #E5E5E5 100%) 0% 0% no-repeat padding-box;
   background-size: cover;
-}
-
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
 }

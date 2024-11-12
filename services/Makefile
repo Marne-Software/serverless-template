@@ -1,11 +1,12 @@
 APP_NAME_DASHED := serverless-template#use kebob case
 
 functionNames := \
-	invalidationControl \
-	getSomething \
-	patchSomething \
-	deleteSomething \
-	postSomething 
+	InvalidationControl \
+	GetSomething \
+	PatchSomething \
+	DeleteSomething \
+	PostSomething \
+	DefaultAuthorizerFunction
 
 clean:
 	@rm -rf ./bin 

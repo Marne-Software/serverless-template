@@ -1,14 +1,14 @@
-import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import Device from '../src/components/Device';
-import { AppContext } from '../src/Types/Context';
-import '@testing-library/jest-dom';
+import React from "react";
+import { render, screen, fireEvent } from "@testing-library/react";
+import Device from "../src/Components/Device";
+import { AppContext } from "../src/Types/Context";
+import "@testing-library/jest-dom";
 // Mock Imports
-import { mockIDevice } from '../__mocks__/device.mock';
-import { mockAppContext } from '../__mocks__/appContext.mock';
+import { mockIDevice } from "../__mocks__/device.mock";
+import { mockAppContext } from "../__mocks__/appContext.mock";
 
-describe('<Device /> Component', () => {
-  it('renders device information correctly', () => {
+describe("<Device /> Component", () => {
+  it("renders device information correctly", () => {
     render(
       <AppContext.Provider value={mockAppContext}>
         <Device device={mockIDevice} />
@@ -20,10 +20,13 @@ describe('<Device /> Component', () => {
     expect(screen.getByText(/HUM \d+%/)).toBeInTheDocument();
   });
 
-  it('handles device click during device selection mode', () => {
+  it("handles device click during device selection mode", () => {
     const setSelectedDevicesMock = jest.fn();
-    const mockContextValue = { ...mockAppContext, setSelectedDevices: setSelectedDevicesMock,
-    isDeviceSelect: true };
+    const mockContextValue = {
+      ...mockAppContext,
+      setSelectedDevices: setSelectedDevicesMock,
+      isDeviceSelect: true,
+    };
 
     render(
       <AppContext.Provider value={mockContextValue}>
@@ -36,6 +39,5 @@ describe('<Device /> Component', () => {
     fireEvent.click(deviceTextElement);
 
     expect(setSelectedDevicesMock).toHaveBeenCalledTimes(1);
-});
-
+  });
 });

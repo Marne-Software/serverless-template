@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: 'AWS::Serverless-2016-10-31'
-Description: SAM Template for Deployment and Local Testing with Docker
+Description: SAM Template with Go for Development and Deployment
 
 Globals:
   Api:
@@ -109,7 +109,7 @@ Resources:
         - !Ref DynamoDBPolicy
         - !Ref CloudWatchLogsPolicy
   
-  userPool:
+  UserPool:
     Type: AWS::Cognito::UserPool
     Properties:
       UserPoolName: !Sub "${AppName}-${Stage}-userPool"
@@ -133,24 +133,24 @@ Resources:
       VerificationMessageTemplate:
         DefaultEmailOption: CONFIRM_WITH_LINK
   
-  userPoolDomain:
+  UserPoolDomain:
     Type: AWS::Cognito::UserPoolDomain
     Properties:
       Domain: !Sub "${AppNameDashed}-${Stage}"  # Set the domain based on the stage (local, dev, prod)
-      UserPoolId: !Ref userPool
+      UserPoolId: !Ref UserPool
 
-  userPoolClient:
+  UserPoolClient:
     Type: AWS::Cognito::UserPoolClient
     Properties:
       ClientName: !Sub "${AppName}-${Stage}-userPoolClient"
-      UserPoolId: !Ref userPool
+      UserPoolId: !Ref UserPool
 
   InvalidationFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "${AppName}-${Stage}-invalidationControl"
       Handler: bootstrap
-      CodeUri: bin/invalidationControl.zip
+      CodeUri: bin/InvalidationControl.zip
       Role: !GetAtt InvalidateRole.Arn
       Environment:
         Variables:
@@ -161,6 +161,27 @@ Resources:
           Properties:
             Bucket: !Ref FrontendBucket   
             Events: s3:ObjectCreated:*
+  
+  DefaultAuthorizerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${AppName}-${Stage}-defaultAuthorizerFunction"
+      Handler: bootstrap
+      CodeUri: bin/DefaultAuthorizerFunction.zip
+      Role: !GetAtt LambdaApiExecutionRole.Arn
+      Environment:
+        Variables:
+          USER_POOL_ID: !Ref UserPool
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - PolicyName: CognitoPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cognito-idp:GetUser
+                Resource: !Sub "arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${userPool}"
 
   RestApi:
     Type: AWS::Serverless::Api
@@ -169,13 +190,9 @@ Resources:
       StageName: !Ref Stage
       Auth:
         Authorizers:
-          CognitoAuthorizer:
-            UserPoolArn:
-              Fn::GetAtt:
-                - userPool
-                - Arn
-            Identity:
-              Header: "method.request.header.Authorization"
+          DefaultAuthorizer:
+            FunctionArn: !GetAtt DefaultAuthorizerFunction.Arn
+            IdentitySource: "method.request.header.Authorization"
       AccessLogSetting:
         DestinationArn: !GetAtt ApiLogGroup.Arn
         Format: '{ "requestId":"$context.requestId", "ip": "$context.identity.sourceIp", "caller": "$context.identity.caller", "user": "$context.identity.user", "requestTime": "$context.requestTime", "httpMethod": "$context.httpMethod", "resourcePath": "$context.resourcePath", "status": "$context.status", "protocol": "$context.protocol", "responseLength": "$context.responseLength" }'
@@ -197,7 +214,7 @@ Resources:
     Properties:
       FunctionName: !Sub "${AppName}-${Stage}-getSomethingFunction"
       Handler: bootstrap
-      CodeUri: bin/getSomething.zip
+      CodeUri: bin/GetSomething.zip
       Role: !GetAtt LambdaApiExecutionRole.Arn
       Events:
         GetSomethingApi:
@@ -207,14 +224,14 @@ Resources:
             Path: /api/something/{id}
             Method: get
             Auth:
-              Authorizer: CognitoAuthorizer
+              Authorizer: DefaultAuthorizer
 
   PostSomethingFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "${AppName}-${Stage}-postSomethingFunction"
       Handler: bootstrap
-      CodeUri: bin/postSomething.zip
+      CodeUri: bin/PostSomething.zip
       Role: !GetAtt LambdaApiExecutionRole.Arn
       Events:
         PostSomethingApi:
@@ -224,14 +241,14 @@ Resources:
             Path: /api/something
             Method: post
             Auth:
-              Authorizer: CognitoAuthorizer
+              Authorizer: DefaultAuthorizer
 
   PatchSomethingFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "${AppName}-${Stage}-patchSomethingFunction"
       Handler: bootstrap
-      CodeUri: bin/patchSomething.zip
+      CodeUri: bin/PatchSomething.zip
       Role: !GetAtt LambdaApiExecutionRole.Arn
       Events:
         PatchSomethingApi:
@@ -241,14 +258,14 @@ Resources:
             Path: /api/something
             Method: patch
             Auth:
-              Authorizer: CognitoAuthorizer
+              Authorizer: DefaultAuthorizer
 
   DeleteSomethingFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "${AppName}-${Stage}-deleteSomethingFunction"
       Handler: bootstrap
-      CodeUri: bin/deleteSomething.zip
+      CodeUri: bin/DeleteSomething.zip
       Role: !GetAtt LambdaApiExecutionRole.Arn
       Events:
         DeleteSomethingApi:
@@ -258,7 +275,7 @@ Resources:
             Path: /api/something/{id}
             Method: delete
             Auth:
-              Authorizer: CognitoAuthorizer
+              Authorizer: DefaultAuthorizer
 
   SomethingsTable:
     Type: AWS::DynamoDB::Table
@@ -346,14 +363,14 @@ Resources:
         HostedZoneId: Z2FDTNDATAQYW2
 
 Outputs:
-  userPoolId:
-    Value: !Ref userPool
+  UserPoolId:
+    Value: !Ref UserPool
     Export:
-      Name: userPoolId
-  userPoolClientId:
-    Value: !Ref userPoolClient
+      Name: UserPoolId
+  UserPoolClientId:
+    Value: !Ref UserPoolClient
     Export:
-      Name: userPoolClientId
+      Name: UserPoolClientId
   ApiUrl:
     Value: !Sub "https://${RestApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}/"
     Description: "API Gateway endpoint URL"

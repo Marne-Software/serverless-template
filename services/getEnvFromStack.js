@@ -34,15 +34,15 @@ async function getEnvFromStack(stage) {
     }
 
     // Get the User Pool ID and Client ID
-    const userPoolId = outputs.find(output => output.OutputKey === 'userPoolId')?.OutputValue;
+    const userPoolId = outputs.find(output => output.OutputKey === 'UserPoolId')?.OutputValue;
     if (!userPoolId) {
-      console.warn("userPoolId output key not found in stack outputs.");
+      console.warn("UserPoolId output key not found in stack outputs.");
       return {};
     }
 
-    const userPoolClientId = outputs.find(output => output.OutputKey === 'userPoolClientId')?.OutputValue;
+    const userPoolClientId = outputs.find(output => output.OutputKey === 'UserPoolClientId')?.OutputValue;
     if (!userPoolClientId) {
-      console.warn("userPoolClientId output key not found in stack outputs.");
+      console.warn("UserPoolClientId output key not found in stack outputs.");
       return {};
     }
 

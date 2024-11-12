@@ -10,13 +10,11 @@ const HomePageContainer = styled(FlexCol)`
 `;
 
 function HomePage() {
-  const { setIsAuthenticated, fetchHelper } = useAuth(); // Get the fetchHelper and setIsAuthenticated function
+  const { fetchHelper } = useAuth(); // Get the fetchHelper and setIsAuthenticated function
   const [something, setSomething] = useState<{ id: string; name: string }>({
     id: "",
     name: "N/A",
   });
-  const [message, setMessage] = useState<string>("N/A");
-  const navigate = useNavigate(); // Get the navigate function
 
   const fetchData = async () => {
     try {
@@ -27,7 +25,6 @@ function HomePage() {
       console.log("res: ", result);
       setSomething(result[0]);
     } catch (error) {
-      setMessage(error.message);
       console.error("Error fetching data:", error);
     }
   };
@@ -38,25 +35,21 @@ function HomePage() {
         `${process.env.API_URL}/something/f0c19de7-1aef-4a66-9a83-c15bd7b232e0`,
         'DELETE'
       );
-
-      setMessage(result.message);
       setSomething({ id: "", name: "N/A" });
       fetchData();
     } catch (error) {
-      setMessage(error.message);
       console.error("Error deleting data:", error);
     }
   };
 
   const postData = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault(); // Prevent default form submission behavior
+    e.preventDefault();
 
     const formData = new FormData(e.target as HTMLFormElement);
-    const name = formData.get("name") as string; // Safely get the 'name' field value
+    const name = formData.get("name") as string; 
 
     try {
       const result = await fetchHelper(`${process.env.API_URL}/something`, 'POST', { name });
-      setMessage(result.message);
       fetchData();
     } catch (error) {
       console.error("Error posting data:", error);
@@ -75,21 +68,9 @@ function HomePage() {
         name,
       });
       console.log("res: ", result);
-      setMessage(result.message);
       fetchData();
     } catch (error) {
       console.error("Error updating data:", error);
-    }
-  };
-
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      console.log("User signed out successfully.");
-      setIsAuthenticated(false); // Update the authentication state
-      navigate("/login"); // Redirect to login after sign-out
-    } catch (error) {
-      console.error("Error signing out:", error);
     }
   };
 
@@ -99,9 +80,6 @@ function HomePage() {
 
   return (
     <HomePageContainer>
-      <div>
-        <strong>Message:</strong> {message}
-      </div>
       <div>
         <strong>Current Something Name:</strong> {something?.name}
       </div>
@@ -128,10 +106,6 @@ function HomePage() {
           </button>
         </FlexRow>
       )}
-      <button type="button" onClick={handleSignOut}>
-        Log Out
-      </button>{" "}
-      {/* Log out button */}
     </HomePageContainer>
   );
 }

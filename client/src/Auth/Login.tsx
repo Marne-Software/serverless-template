@@ -1,45 +1,43 @@
-import React, { useState } from 'react';
-import { signIn, type SignInInput } from 'aws-amplify/auth'; // Import directly from aws-amplify/auth
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../Auth/AuthContext";
+import { FlexCol, FlexRow } from "../Styles";
 
 const Login: React.FC = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const navigate = useNavigate();
-
-  const handleSignIn = async ({ username, password }: SignInInput) => {
-    try {
-      const { isSignedIn, nextStep } = await signIn({ username, password }); // Call signIn
-      console.log('Sign-in successful:', { isSignedIn, nextStep }); // Optional logging
-      navigate('/'); // Redirect on successful login
-    } catch (error) {
-      console.error('Error logging in:', error);
-    }
-  };
+  const { handleLogin } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault(); // Prevent default form submission behavior
-    await handleSignIn({ username, password }); // Call handleSignIn with username and password
+    e.preventDefault();
+    await handleLogin(username, password);
   };
 
   return (
     <form onSubmit={handleSubmit}>
-      <input
-        type="text"
-        placeholder="Username (Email)"
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
-        required
-      />
-      <input
-        type="password"
-        placeholder="Password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        required
-      />
-      <button type="submit">Login</button>
-      <button type="button" onClick={() => navigate('/register')}>Register</button> {/* Register button */}
+      <FlexCol>
+        <input
+          type="text"
+          placeholder="Username (Email)"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          required
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+        <FlexRow>
+          <button type="submit">Login</button>
+          <button type="button" onClick={() => navigate("/register")}>
+            Register
+          </button>
+        </FlexRow>
+      </FlexCol>
     </form>
   );
 };

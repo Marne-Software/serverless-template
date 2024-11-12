@@ -1,84 +1,135 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { fetchAuthSession } from 'aws-amplify/auth'; // Import fetchAuthSession from AWS Amplify
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { fetchAuthSession, signOut, fetchUserAttributes, FetchUserAttributesOutput, signIn } from "aws-amplify/auth";
+import { useNavigate } from "react-router-dom";
+
+interface IApiMessage {
+  isError: boolean;
+  payload: string;
+}
 
 interface AuthContextType {
   isAuthenticated: boolean;
+  apiMessage: IApiMessage;
+  userAttributes: FetchUserAttributesOutput | null;
   setIsAuthenticated: React.Dispatch<React.SetStateAction<boolean>>;
   fetchHelper: (
     endpoint: string,
     method?: string,
     body?: any,
-    fullRiz?: boolean,
     headers?: Record<string, string>
   ) => Promise<any>;
+  handleSignOut: () => Promise<void>;
+  handleLogin: (username: string, password: string) => Promise<void>; // Add handleLogin to the context type
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-
-  // Check if the user is authenticated when the component mounts
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const { tokens } = await fetchAuthSession(); // Fetch the session
-        // If tokens exist, the user is authenticated
-        setIsAuthenticated(!!tokens); // Set to true if tokens are present
-      } catch (error) {
-        console.error('Error checking authentication:', error);
-        setIsAuthenticated(false); // If there's an error, assume not authenticated
-      }
-    };
-
-    checkAuth(); // Call the checkAuth function
-  }, []); // Run once on component mount
+  const [apiMessage, setApiMessage] = useState<IApiMessage>({ isError: false, payload: "" });
+  const [userAttributes, setUserAttributes] = useState<FetchUserAttributesOutput | null>(null);
+  const navigate = useNavigate();
 
   const fetchHelper = async (
     endpoint: string,
-    method: string = 'GET',
+    method: string = "GET",
     body: any = undefined,
-    fullRiz: boolean = false,
     headers?: Record<string, string>
   ): Promise<any> => {
     if (!isAuthenticated) {
-      throw new Error('User is not authenticated'); // Handle unauthenticated access
+      throw new Error("User is not authenticated");
     }
 
     try {
-      // Fetch the authentication session
-      const { tokens } = await fetchAuthSession({ forceRefresh: true });
-      console.log("tokens: ", tokens?.idToken?.toString());
-      const requestOptions: RequestInit = {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + tokens?.idToken?.toString(), // Use the JWT token from the session
-          ...headers,
-        },
-        method: method,
-        body: method !== 'GET' ? JSON.stringify(body) : undefined,
-      };
-
-      // Perform the fetch request
-      const response = await fetch(endpoint, requestOptions);
-
-      // Handle the response
-      if (!response.ok) {
-        const errorRes = await response.json();
-        throw new Error(errorRes.message);
+      const session = await fetchAuthSession({ forceRefresh: true });
+      const accessToken = session.tokens?.accessToken;
+      if (!accessToken) {
+        throw new Error("Authentication token is missing");
       }
 
-      // Return response based on fullRiz flag
-      return fullRiz ? response : response.json();
+      const requestOptions: RequestInit = {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + accessToken,
+          ...headers,
+        },
+        method,
+        body: method !== "GET" ? JSON.stringify(body) : undefined,
+      };
+
+      const response = await fetch(endpoint, requestOptions);
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        setApiMessage({ isError: true, payload: responseData.message });
+        throw new Error(responseData.message);
+      }
+
+      setApiMessage({ isError: false, payload: responseData.message });
+      return responseData;
     } catch (error) {
-      console.error('Error in fetchHelper:', error);
-      setIsAuthenticated(false); // Optionally set authenticated state to false on error
-      throw error; // Optionally rethrow the error for further handling
+      console.error("Error in fetchHelper:", error);
+      throw error;
+    }
+  };
+  
+  const checkAuth = async () => {
+    try {
+      const session = await fetchAuthSession();
+      if (session && session.tokens && session.tokens.accessToken) {
+        setIsAuthenticated(true);
+        const attributes = await fetchUserAttributes();
+        setUserAttributes(attributes);
+      } else {
+        setIsAuthenticated(false);
+        setUserAttributes(null);
+      }
+    } catch (error) {
+      console.error("Error checking authentication:", error);
+      setIsAuthenticated(false);
+      setUserAttributes(null);
     }
   };
 
+  const handleLogin = async (username: string, password: string) => {
+    try {
+      await signIn({username, password});
+      await checkAuth();
+      navigate("/");
+    } catch (error) {
+      console.error("Login failed:", error);
+      setApiMessage({ isError: true, payload: error.message });
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      console.log("User signed out successfully.");
+      setIsAuthenticated(false);
+      setUserAttributes(null);
+      navigate("/login");
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  };
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ isAuthenticated, setIsAuthenticated, fetchHelper }}>
+    <AuthContext.Provider
+      value={{
+        isAuthenticated,
+        setIsAuthenticated,
+        fetchHelper,
+        apiMessage,
+        userAttributes,
+        handleSignOut,
+        handleLogin, // Provide handleLogin in context
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

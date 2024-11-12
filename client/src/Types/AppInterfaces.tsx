@@ -1,4 +1,4 @@
 export interface IAppContext {
-    isOpen: boolean;
-    setIsOpen: (value: boolean) => void;
+    simpleContext: string;
+    setSimpleContext: (value: string) => void;
 }

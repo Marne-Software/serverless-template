@@ -1,56 +1,63 @@
-import React, { useState } from 'react';
-import { signUp } from 'aws-amplify/auth'; // Import signUp directly from aws-amplify/auth
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from "react";
+import { signUp } from "aws-amplify/auth"; // Import signUp directly from aws-amplify/auth
+import { useNavigate } from "react-router-dom";
+import { FlexCol } from "../Styles";
 
 const Register: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
-  const handleSignUp = async () => {
+  const handleSignUp = async (e: React.FormEvent) => {
+    const formData = new FormData(e.target as HTMLFormElement);
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
+    const lastName = formData.get("lastName") as string;
+    const firstName = formData.get("firstName") as string;
+
     try {
-      // Attempt to sign up the user
       const userSub = await signUp({
-        username: email, // Use the email as the username
-        password
+        username: email,
+        password,
+        options: {
+          userAttributes: {
+            family_name: lastName,
+            given_name: firstName,
+          },
+        },
       });
 
-      console.log('Sign-up successful:', userSub); // Log the userSub
+      console.log("Sign-up successful:", userSub); // Log the userSub
       return { isSignUpComplete: true, userId: userSub }; // Return success information
     } catch (error) {
-      console.error('Error signing up:', error); // Log any errors
+      console.error("Error signing up:", error); // Log any errors
       return { isSignUpComplete: false, userId: null }; // Return failure information
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); // Prevent default form submission behavior
-    const signUpResult = await handleSignUp(); // Call the sign-up function
+    const signUpResult = await handleSignUp(e); // Call the sign-up function
 
     if (signUpResult.isSignUpComplete) {
-      navigate('/login'); // Redirect to login after successful registration
+      navigate("/login"); // Redirect to login after successful registration
     } else {
-      console.error('Sign-up failed. Please try again.'); // Handle sign-up failure
+      console.error("Sign-up failed. Please try again."); // Handle sign-up failure
     }
   };
 
   return (
     <form onSubmit={handleSubmit}>
-      <input
-        type="email"
-        placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        required
-      />
-      <input
-        type="password"
-        placeholder="Password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        required
-      />
-      <button type="submit">Register</button>
+      <FlexCol>
+        <input name="lastName" placeholder="Last name..." required />
+        <input name="firstName" placeholder="First name..." required />
+        <input type="email" name="email" placeholder="Email" required />
+        <input
+          type="password"
+          name="password"
+          placeholder="Password"
+          required
+        />
+        <button type="submit">Register</button>
+      </FlexCol>
     </form>
   );
 };

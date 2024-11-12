@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: SAM Template for Deployment and Local Testing with Docker
+Description: SAM Template with Go for Development and Deployment
 Globals:
   Api:
     Cors:
@@ -108,7 +108,7 @@ Resources:
       ManagedPolicyArns:
       - Ref: DynamoDBPolicy
       - Ref: CloudWatchLogsPolicy
-  userPool:
+  UserPool:
     Type: AWS::Cognito::UserPool
     Properties:
       UserPoolName:
@@ -132,27 +132,27 @@ Resources:
         From: admin@marneinnovationcenter.com
       VerificationMessageTemplate:
         DefaultEmailOption: CONFIRM_WITH_LINK
-  userPoolDomain:
+  UserPoolDomain:
     Type: AWS::Cognito::UserPoolDomain
     Properties:
       Domain:
         Fn::Sub: ${AppNameDashed}-${Stage}
       UserPoolId:
-        Ref: userPool
-  userPoolClient:
+        Ref: UserPool
+  UserPoolClient:
     Type: AWS::Cognito::UserPoolClient
     Properties:
       ClientName:
         Fn::Sub: ${AppName}-${Stage}-userPoolClient
       UserPoolId:
-        Ref: userPool
+        Ref: UserPool
   InvalidationFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName:
         Fn::Sub: ${AppName}-${Stage}-invalidationControl
       Handler: bootstrap
-      CodeUri: ../../bin/invalidationControl.zip
+      CodeUri: ../../bin/InvalidationControl.zip
       Role:
         Fn::GetAtt:
         - InvalidateRole
@@ -168,6 +168,32 @@ Resources:
             Bucket:
               Ref: FrontendBucket
             Events: s3:ObjectCreated:*
+  DefaultAuthorizerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: ${AppName}-${Stage}-defaultAuthorizerFunction
+      Handler: bootstrap
+      CodeUri: ../../bin/DefaultAuthorizerFunction.zip
+      Role:
+        Fn::GetAtt:
+        - LambdaApiExecutionRole
+        - Arn
+      Environment:
+        Variables:
+          USER_POOL_ID:
+            Ref: UserPool
+      Policies:
+      - AWSLambdaBasicExecutionRole
+      - PolicyName: CognitoPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - cognito-idp:GetUser
+            Resource:
+              Fn::Sub: arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${userPool}
   RestApi:
     Type: AWS::Serverless::Api
     Properties:
@@ -177,13 +203,12 @@ Resources:
         Ref: Stage
       Auth:
         Authorizers:
-          CognitoAuthorizer:
-            UserPoolArn:
+          DefaultAuthorizer:
+            FunctionArn:
               Fn::GetAtt:
-              - userPool
+              - DefaultAuthorizerFunction
               - Arn
-            Identity:
-              Header: method.request.header.Authorization
+            IdentitySource: method.request.header.Authorization
       AccessLogSetting:
         DestinationArn:
           Fn::GetAtt:
@@ -212,7 +237,7 @@ Resources:
       FunctionName:
         Fn::Sub: ${AppName}-${Stage}-getSomethingFunction
       Handler: bootstrap
-      CodeUri: ../../bin/getSomething.zip
+      CodeUri: ../../bin/GetSomething.zip
       Role:
         Fn::GetAtt:
         - LambdaApiExecutionRole
@@ -226,14 +251,14 @@ Resources:
             Path: /api/something/{id}
             Method: get
             Auth:
-              Authorizer: CognitoAuthorizer
+              Authorizer: DefaultAuthorizer
   PostSomethingFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName:
         Fn::Sub: ${AppName}-${Stage}-postSomethingFunction
       Handler: bootstrap
-      CodeUri: ../../bin/postSomething.zip
+      CodeUri: ../../bin/PostSomething.zip
       Role:
         Fn::GetAtt:
         - LambdaApiExecutionRole
@@ -247,14 +272,14 @@ Resources:
             Path: /api/something
             Method: post
             Auth:
-              Authorizer: CognitoAuthorizer
+              Authorizer: DefaultAuthorizer
   PatchSomethingFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName:
         Fn::Sub: ${AppName}-${Stage}-patchSomethingFunction
       Handler: bootstrap
-      CodeUri: ../../bin/patchSomething.zip
+      CodeUri: ../../bin/PatchSomething.zip
       Role:
         Fn::GetAtt:
         - LambdaApiExecutionRole
@@ -268,14 +293,14 @@ Resources:
             Path: /api/something
             Method: patch
             Auth:
-              Authorizer: CognitoAuthorizer
+              Authorizer: DefaultAuthorizer
   DeleteSomethingFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName:
         Fn::Sub: ${AppName}-${Stage}-deleteSomethingFunction
       Handler: bootstrap
-      CodeUri: ../../bin/deleteSomething.zip
+      CodeUri: ../../bin/DeleteSomething.zip
       Role:
         Fn::GetAtt:
         - LambdaApiExecutionRole
@@ -289,7 +314,7 @@ Resources:
             Path: /api/something/{id}
             Method: delete
             Auth:
-              Authorizer: CognitoAuthorizer
+              Authorizer: DefaultAuthorizer
   SomethingsTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -383,16 +408,16 @@ Resources:
           - DomainName
         HostedZoneId: Z2FDTNDATAQYW2
 Outputs:
-  userPoolId:
+  UserPoolId:
     Value:
-      Ref: userPool
+      Ref: UserPool
     Export:
-      Name: userPoolId
-  userPoolClientId:
+      Name: UserPoolId
+  UserPoolClientId:
     Value:
-      Ref: userPoolClient
+      Ref: UserPoolClient
     Export:
-      Name: userPoolClientId
+      Name: UserPoolClientId
   ApiUrl:
     Value:
       Fn::Sub: https://${RestApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}/
