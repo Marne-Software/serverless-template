@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { FlexCol, FlexRow } from "./Styles";
 import styled from "styled-components";
-import { signOut } from "aws-amplify/auth";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "./Auth/AuthContext"; // Import the authentication context
 
 const HomePageContainer = styled(FlexCol)`
@@ -22,8 +20,12 @@ function HomePage() {
         `${process.env.API_URL}/something/f0c19de7-1aef-4a66-9a83-c15bd7b232e0`,
         'GET'
       );
-      console.log("res: ", result);
+
+    if (Array.isArray(result) && result[0]) {
       setSomething(result[0]);
+    } else {
+      setSomething({ id: "", name: "N/A" }); 
+    }
     } catch (error) {
       console.error("Error fetching data:", error);
     }

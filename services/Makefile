@@ -47,7 +47,12 @@ down:
 	@docker compose down
 	@rm -rf ./docker/dynamodb
 
-# DEPLOY COMMANDS
+## TEST COMMANDS ##
+test-client:
+	@cd ../client && npm test
+	@cd ../client && npm run cy:run
+
+## DEPLOYMENT COMMANDS ##
 deploy-services-dev: build
 	@rm -rf .aws-sam
 	@sam build

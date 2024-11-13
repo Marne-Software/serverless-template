@@ -20,7 +20,7 @@
     "sourceMap": true,
     "jsx": "react",
     "outDir": "./dist",
-    "types": ["jest"],
+    "types": ["node", "jest"],
     "typeRoots": ["./node_modules/@types"]
   },
   

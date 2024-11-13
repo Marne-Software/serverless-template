@@ -1,80 +1,47 @@
+/// <reference types="node" />
 import { defineConfig } from 'cypress';
-import * as xlsx from 'xlsx';
-import * as fs from 'fs';
-import dotenv from 'dotenv'; // Use dotenv to load environment variables
-
-const AWS = require('aws-sdk');
-
-AWS.config.update({
-    region: 'us-east-1', // Replace with your AWS region
-});
-
-interface ParseXlsxParams {
-  filePath: string;
-}
-
-dotenv.config();
 
 export default defineConfig({
-  env: {
-    STAGE: process.env.STAGE,
-    BASE_URL: process.env.BASE_URL
-  },
   e2e: {
-    baseUrl: 'http://localhost:3000',
+    // The base URL for the application under test
+    baseUrl: 'http://localhost:3000', // Change to your app's URL
+
+    // Configure the viewport size
+    viewportWidth: 1280,
+    viewportHeight: 720,
+
+    // Default command timeout in milliseconds
+    defaultCommandTimeout: 15000,
+
+    // Path to support file (set to false to disable)
+    supportFile: './cypress/support/index.ts',
+
+    // Set up test retries
+    retries: {
+      runMode: 2, // Number of retries for `cypress run`
+      openMode: 0, // Number of retries for `cypress open`
+    },
+
+    // Define custom reporter if needed
+    reporter: 'spec',
+
+    // Enables video recording for each test
+    video: false,
+
+    // Set up any environment variables for Cypress
+    env: {
+      LOGIN_EMAIL: 'salem.ezz@gmail.com',
+      LOGIN_PASSWORD: 'Password1!',
+      API_URL: process.env.API_URL
+    },
+
+    // Define test patterns or directories
+    specPattern: 'cypress/e2e/**/*.cy.{js,ts}',
+
+    // Event listeners can be added here
     setupNodeEvents(on, config) {
-      on('task', {
-        log(message) {
-          console.log(message);
-          return null;
-        },
-        changeUserRoleToRequester(email) {
-          const cognito = new AWS.CognitoIdentityServiceProvider();
-          const params = {
-            UserPoolId: process.env.USER_POOL_ID, // Set your User Pool ID here
-            Username: email,
-            UserAttributes: [
-              {
-                Name: 'custom:role',
-                Value: 'requester'
-              },
-            ],
-          };
-
-          return cognito.adminUpdateUserAttributes(params).promise()
-            .then(() => {
-              return null; // Return null to indicate the task was successful
-            })
-            .catch((error) => {
-              throw new Error(error.message);
-            });
-        },
-        parseXlsx: ({ filePath }: ParseXlsxParams) => {
-          return new Promise((resolve, reject) => {
-            try {
-              // Read file content as binary
-              const fileContent = fs.readFileSync(filePath, 'binary');
-
-              // Parse the file content using xlsx
-              const jsonData = xlsx.read(fileContent, { type: 'binary' });
-
-              resolve(jsonData);
-            } catch (e) {
-              reject(e);
-            }
-          });
-        },
-        validateParsedData: ({ jsonData, expectedData }) => {
-          try {
-            expect(jsonData.data).to.deep.equal(expectedData);
-            return null; // Resolve the promise, indicating success
-          } catch (e) {
-            return e; // Reject the promise with the error, indicating failure
-          }
-        },
-      });
-
-      return config; // Return the updated config
+      // Example: Add tasks, custom event listeners, or plugins here
+      return config;
     },
   },
 });

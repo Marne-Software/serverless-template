@@ -39,24 +39,17 @@
 declare namespace Cypress {
   interface Chainable<Subject = any> {
     login(): Chainable<Subject>;
-    parseXlsx(inputFile: string): Chainable<Subject>;
-    logWorkingDirectory(): Chainable<Subject>;
-    fileExists(filePath: string): Chainable<Subject>;
-    executeDeleteUserScript(): Chainable<Subject>; // Add the new command declaration
   }
 }
 
 Cypress.Commands.add("login", () => {
-  cy.session(
-    "mcat-" + Cypress.env("MCAT_USER") + "@hylugahk.mailosaur.net",
+  cy.session(Cypress.env("LOGIN_EMAIL"),
     () => {
       cy.visit("/");
       cy.wait(1000);
       // Login process
-      cy.get('input[name="email"]').type(
-        "mcat-" + Cypress.env("MCAT_USER") + "@hylugahk.mailosaur.net"
-      );
-      cy.get('input[name="password"]').type("Password1!");
+      cy.get('input[name="email"]').type(Cypress.env("LOGIN_EMAIL"));
+      cy.get('input[name="password"]').type(Cypress.env("LOGIN_PASSWORD"));
       cy.contains("Login").click({ force: true });
       cy.location("pathname").should("eq", "/");
     },
@@ -64,18 +57,4 @@ Cypress.Commands.add("login", () => {
       cacheAcrossSpecs: true,
     }
   );
-});
-
-Cypress.Commands.add("parseXlsx", (inputFile) => {
-  return cy.task("parseXlsx", { filePath: inputFile });
-});
-
-Cypress.Commands.add("logWorkingDirectory", () => {
-  cy.exec("pwd").then(({ stdout }) => {
-    cy.log(`Current working directory: ${stdout.trim()}`);
-  });
-});
-
-Cypress.Commands.add("fileExists", (filePath: string) => {
-  return cy.task("fileExists", filePath);
 });

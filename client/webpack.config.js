@@ -8,11 +8,22 @@ module.exports = async (webpackEnv, argv) => {
   let envConfig;
 
   if (stage === 'local') {
-    envConfig = require(path.join(__dirname, '../env.local.json')).Parameters;
+    envConfig = require(path.join(__dirname, 'env.local.json')).Parameters;
   } else {
     const getEnvFromStack = require(path.join(__dirname, '../services/getEnvFromStack'));
     envConfig = await getEnvFromStack(stage); // Fetch environment from stack
   }
+
+  // Write Cypress environment configuration file
+  const cypressEnvPath = path.join(__dirname, 'cypress.env.json');
+  const cypressEnvConfig = {
+    API_URL: envConfig.API_URL,
+    STAGE: envConfig.STAGE,
+    DYNAMODB_ENDPOINT: envConfig.DYNAMODB_ENDPOINT,
+    USER_POOL_ID: envConfig.USER_POOL_ID,
+    CLIENT_ID: envConfig.CLIENT_ID,
+  };
+  fs.writeFileSync(cypressEnvPath, JSON.stringify(cypressEnvConfig, null, 2));
 
   const baseConfig = {
     output: {
