@@ -1,3 +1,4 @@
+APP_NAME := serverlessTemplate# Use camel case
 APP_NAME_DASHED := serverless-template#use kebob case
 
 functionNames := \
@@ -21,20 +22,27 @@ build: clean
 		rm ./bin/bootstrap; \
 	done
 
+install:
+	@npm install
+	@cd ../client && npm install
+
 # LOCAL COMMANDS
 
 seed-local:
 	@echo "Seeding local DynamoDB table..."
+	@echo "Creating table: $(APP_NAME)-local-somethingsTable"
 	@aws dynamodb create-table \
-		--table-name $(APP_NAME)SomethingsTable-local \
+		--table-name "$(APP_NAME)-local-somethingsTable" \
 		--attribute-definitions AttributeName=id,AttributeType=S \
 		--key-schema AttributeName=id,KeyType=HASH \
 		--billing-mode PAY_PER_REQUEST \
-		--endpoint-url http://localhost:8080 || echo "Table already exists."
+		--endpoint-url http://localhost:8080 \
+		--no-cli-pager || echo "Table already exists."
 
-run: build
+
+run-server: build
 	@docker compose up -d
-	@sleep
+	@sleep 5
 	@make seed-local
 	@rm -rf .aws-sam
 	@sam build
@@ -42,6 +50,9 @@ run: build
 	SLS_PID=$$!; \
 	trap "make down; kill $$SLS_PID" INT; \
 	wait $$SLS_PID
+
+run-frontend:
+	@cd ../client && npm run start-local
 
 down:
 	@docker compose down

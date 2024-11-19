@@ -2,7 +2,7 @@ const AWS = require('aws-sdk');
 const cloudformation = new AWS.CloudFormation({ region: 'us-east-1' });
 
 async function getEnvFromStack(stage) {
-  const stackName = `serverless-template-${stage}`;
+  const stackName = stage === 'local'? 'serverless-template-dev' : `serverless-template-${stage}`;
 
   const params = {
     StackName: stackName,
@@ -47,6 +47,16 @@ async function getEnvFromStack(stage) {
     }
 
     // Return the configuration values with mapped keys
+    if (stage == 'local') {
+      return {
+        API_URL:  'http://127.0.0.1:4000/api',
+        DYNAMODB_ENDPOINT: 'http://host.docker.internal:8080',
+        STAGE: stage,
+        USER_POOL_ID: userPoolId,
+        CLIENT_ID: userPoolClientId,
+      };
+    } 
+
     return {
       API_URL: apiUrl,
       STAGE: stage,
@@ -54,6 +64,7 @@ async function getEnvFromStack(stage) {
       USER_POOL_ID: userPoolId,
       CLIENT_ID: userPoolClientId,
     };
+    
   } catch (error) {
     console.error("Error fetching stack outputs:", error);
     throw error;

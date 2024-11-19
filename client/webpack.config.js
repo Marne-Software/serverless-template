@@ -5,14 +5,8 @@ const webpack = require('webpack');
 
 module.exports = async (webpackEnv, argv) => {
   const stage = webpackEnv.stage || 'local'; // Default to 'local' if not specified
-  let envConfig;
-
-  if (stage === 'local') {
-    envConfig = require(path.join(__dirname, 'env.local.json')).Parameters;
-  } else {
-    const getEnvFromStack = require(path.join(__dirname, '../services/getEnvFromStack'));
-    envConfig = await getEnvFromStack(stage); // Fetch environment from stack
-  }
+  const getEnvFromStack = require(path.join(__dirname, '../services/getEnvFromStack'));
+  const envConfig = await getEnvFromStack(stage); // Fetch environment from stack
 
   // Write Cypress environment configuration file
   const cypressEnvPath = path.join(__dirname, 'cypress.env.json');
