@@ -1,0 +1,444 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SAM Template with Go for Development and Deployment
+Globals:
+  Api:
+    Cors:
+      AllowMethods: '''GET,POST,DELETE,PATCH,OPTIONS'''
+      AllowHeaders: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'''
+      AllowOrigin: '''*'''
+  Function:
+    Runtime: provided.al2023
+    MemorySize: 128
+    Timeout: 30
+    Environment:
+      Variables:
+        STAGE:
+          Ref: Stage
+        DYNAMODB_ENDPOINT: ''
+Parameters:
+  Stage:
+    Type: String
+    Default: local
+    AllowedValues:
+    - dev
+    - local
+    - prod
+  AppName:
+    Type: String
+    Default: serverlessTemplate
+  AppNameDashed:
+    Type: String
+    Default: serverless-template
+Resources:
+  InvalidatePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName:
+        Fn::Sub: ${AppName}-${Stage}-InvalidatePolicy
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - cloudfront:CreateInvalidation
+          Resource: '*'
+  DynamoDBPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName:
+        Fn::Sub: ${AppName}-${Stage}-DynamoDBPolicy
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - dynamodb:GetItem
+          - dynamodb:PutItem
+          - dynamodb:UpdateItem
+          - dynamodb:DeleteItem
+          - dynamodb:Query
+          Resource:
+            Fn::GetAtt:
+            - SomethingsTable
+            - Arn
+  CloudWatchLogsPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName:
+        Fn::Sub: ${AppName}-${Stage}-CloudWatchLogsPolicy
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - logs:CreateLogGroup
+          - logs:CreateLogStream
+          - logs:PutLogEvents
+          Resource: arn:aws:logs:*:*:*
+  InvalidateRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName:
+        Fn::Sub: ${AppName}-${Stage}-invalidateRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      ManagedPolicyArns:
+      - Ref: InvalidatePolicy
+      - Ref: CloudWatchLogsPolicy
+  LambdaApiExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      ManagedPolicyArns:
+      - Ref: DynamoDBPolicy
+      - Ref: CloudWatchLogsPolicy
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName:
+        Fn::Sub: ${AppName}-${Stage}-userPool
+      UsernameAttributes:
+      - email
+      Schema:
+      - Name: email
+        AttributeDataType: String
+        Required: true
+        Mutable: true
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 6
+      AutoVerifiedAttributes:
+      - email
+      EmailConfiguration:
+        EmailSendingAccount: DEVELOPER
+        SourceArn: arn:aws:ses:us-east-1:827183242253:identity/marneinnovationcenter.com
+        ReplyToEmailAddress: admin@marneinnovationcenter.com
+        From: admin@marneinnovationcenter.com
+      VerificationMessageTemplate:
+        DefaultEmailOption: CONFIRM_WITH_LINK
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain:
+        Fn::Sub: ${AppNameDashed}-${Stage}
+      UserPoolId:
+        Ref: UserPool
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName:
+        Fn::Sub: ${AppName}-${Stage}-userPoolClient
+      UserPoolId:
+        Ref: UserPool
+  InvalidationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: ${AppName}-${Stage}-invalidationControl
+      Handler: bootstrap
+      CodeUri: ../../services/bin/InvalidationControl.zip
+      Role:
+        Fn::GetAtt:
+        - InvalidateRole
+        - Arn
+      Environment:
+        Variables:
+          DISTRIBUTION_ID:
+            Fn::ImportValue: CloudFrontDistributionId
+      Events:
+        S3Event:
+          Type: S3
+          Properties:
+            Bucket:
+              Ref: FrontendBucket
+            Events: s3:ObjectCreated:*
+  DefaultAuthorizerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: ${AppName}-${Stage}-defaultAuthorizerFunction
+      Handler: bootstrap
+      CodeUri: ../../services/bin/DefaultAuthorizerFunction.zip
+      Role:
+        Fn::GetAtt:
+        - LambdaApiExecutionRole
+        - Arn
+      Environment:
+        Variables:
+          USER_POOL_ID:
+            Ref: UserPool
+      Policies:
+      - AWSLambdaBasicExecutionRole
+      - PolicyName: CognitoPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - cognito-idp:GetUser
+            Resource:
+              Fn::Sub: arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${userPool}
+  RestApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name:
+        Fn::Sub: ${AppName}-${Stage}-api
+      StageName:
+        Ref: Stage
+      Auth:
+        Authorizers:
+          DefaultAuthorizer:
+            FunctionArn:
+              Fn::GetAtt:
+              - DefaultAuthorizerFunction
+              - Arn
+            IdentitySource: method.request.header.Authorization
+      AccessLogSetting:
+        DestinationArn:
+          Fn::GetAtt:
+          - ApiLogGroup
+          - Arn
+        Format: '{ "requestId":"$context.requestId", "ip": "$context.identity.sourceIp",
+          "caller": "$context.identity.caller", "user": "$context.identity.user",
+          "requestTime": "$context.requestTime", "httpMethod": "$context.httpMethod",
+          "resourcePath": "$context.resourcePath", "status": "$context.status", "protocol":
+          "$context.protocol", "responseLength": "$context.responseLength" }'
+      MethodSettings:
+      - DataTraceEnabled: true
+        HttpMethod: '*'
+        LoggingLevel: INFO
+        ResourcePath: /*
+        MetricsEnabled: true
+  ApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName:
+        Fn::Sub: /aws/apigateway/${AppName}-${Stage}-api
+      RetentionInDays: 7
+  GetSomethingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: ${AppName}-${Stage}-getSomethingFunction
+      Handler: bootstrap
+      CodeUri: ../../services/bin/GetSomething.zip
+      Role:
+        Fn::GetAtt:
+        - LambdaApiExecutionRole
+        - Arn
+      Events:
+        GetSomethingApi:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: RestApi
+            Path: /api/something/{id}
+            Method: get
+            Auth:
+              Authorizer: DefaultAuthorizer
+  PostSomethingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: ${AppName}-${Stage}-postSomethingFunction
+      Handler: bootstrap
+      CodeUri: ../../services/bin/PostSomething.zip
+      Role:
+        Fn::GetAtt:
+        - LambdaApiExecutionRole
+        - Arn
+      Events:
+        PostSomethingApi:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: RestApi
+            Path: /api/something
+            Method: post
+            Auth:
+              Authorizer: DefaultAuthorizer
+  PatchSomethingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: ${AppName}-${Stage}-patchSomethingFunction
+      Handler: bootstrap
+      CodeUri: ../../services/bin/PatchSomething.zip
+      Role:
+        Fn::GetAtt:
+        - LambdaApiExecutionRole
+        - Arn
+      Events:
+        PatchSomethingApi:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: RestApi
+            Path: /api/something
+            Method: patch
+            Auth:
+              Authorizer: DefaultAuthorizer
+  DeleteSomethingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: ${AppName}-${Stage}-deleteSomethingFunction
+      Handler: bootstrap
+      CodeUri: ../../services/bin/DeleteSomething.zip
+      Role:
+        Fn::GetAtt:
+        - LambdaApiExecutionRole
+        - Arn
+      Events:
+        DeleteSomethingApi:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: RestApi
+            Path: /api/something/{id}
+            Method: delete
+            Auth:
+              Authorizer: DefaultAuthorizer
+  SomethingsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName:
+        Fn::Sub: ${AppName}-${Stage}-somethingsTable
+      AttributeDefinitions:
+      - AttributeName: id
+        AttributeType: S
+      KeySchema:
+      - AttributeName: id
+        KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+  FrontendBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        Fn::Sub: ${AppNameDashed}-${Stage}-frontend
+      OwnershipControls:
+        Rules:
+        - ObjectOwnership: BucketOwnerEnforced
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: false
+        RestrictPublicBuckets: false
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: error.html
+      Tags:
+      - Key: Environment
+        Value:
+          Ref: Stage
+  FrontendBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket:
+        Ref: FrontendBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal: '*'
+          Action: s3:GetObject
+          Resource:
+            Fn::Sub: ${FrontendBucket.Arn}/*
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Origins:
+        - DomainName:
+            Fn::GetAtt:
+            - FrontendBucket
+            - DomainName
+          Id: S3Origin
+          CustomOriginConfig:
+            OriginProtocolPolicy: http-only
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods:
+          - GET
+          - HEAD
+          - OPTIONS
+          CachedMethods:
+          - GET
+          - HEAD
+          ForwardedValues:
+            QueryString: false
+            Cookies:
+              Forward: none
+        ViewerCertificate:
+          AcmCertificateArn: arn:aws:acm:us-east-1:827183242253:certificate/9790a1b0-99d3-4fbb-a45e-2de60e2defb2
+          SslSupportMethod: sni-only
+        DefaultRootObject: index.html
+        PriceClass: PriceClass_100
+        Aliases:
+        - Fn::Sub: ${AppNameDashed}-${Stage}.marneinnovationcenter.com
+  RecordSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: marneinnovationcenter.com.
+      Name:
+        Fn::Sub: ${AppNameDashed}-${Stage}.marneinnovationcenter.com.
+      Type: A
+      AliasTarget:
+        DNSName:
+          Fn::GetAtt:
+          - CloudFrontDistribution
+          - DomainName
+        HostedZoneId: Z2FDTNDATAQYW2
+Outputs:
+  UserPoolId:
+    Value:
+      Ref: UserPool
+    Export:
+      Name: UserPoolId
+  UserPoolClientId:
+    Value:
+      Ref: UserPoolClient
+    Export:
+      Name: UserPoolClientId
+  ApiUrl:
+    Value:
+      Fn::Sub: https://${RestApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}/
+    Description: API Gateway endpoint URL
+  WebsiteURL:
+    Value:
+      Fn::Sub: https://${AppNameDashed}-${Stage}.marneinnovationcenter.com
+    Description: URL for the static website hosted on S3 and served via CloudFront
+  CloudFrontDistributionId:
+    Value:
+      Ref: CloudFrontDistribution
+    Description: CloudFront Distribution ID
+    Export:
+      Name: CloudFrontDistributionId
+  CloudFrontDomainName:
+    Value:
+      Fn::GetAtt:
+      - CloudFrontDistribution
+      - DomainName
+    Description: Domain name for the CloudFront distribution
+  Route53Record:
+    Value:
+      Ref: RecordSet
+    Description: Route 53 record for the subdomain ${AppNameDashed}-${Stage}.marneinnovationcenter.com

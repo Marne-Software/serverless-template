@@ -1,11 +1,15 @@
 package helpers
 
 import (
-    "context"
-    "fmt"
-    "os"
-    "github.com/aws/aws-sdk-go-v2/config"
-    "github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"context"
+	"fmt"
+	"log"
+	"os"
+	"testing"
+
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
 // InitializeDynamoDBClient sets up and returns a DynamoDB client based on environment variables
@@ -42,3 +46,68 @@ func GetDefaultHeaders() map[string]string {
 		"Cache-Control":                "no-cache",      
 	}
 }
+
+// TEST HELPERS
+func DeleteTestItem(testID string, tableName string, t *testing.T) {
+	ctx := context.Background()
+
+    // Load AWS credentials and region
+	cfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		t.Fatalf("Failed to load AWS configuration: %v", err)
+	}
+
+	dbClient := dynamodb.New(dynamodb.Options{
+		Region:      "us-east-1",
+        Credentials: cfg.Credentials,
+		EndpointResolver: dynamodb.EndpointResolverFromURL("http://localhost:8080"),
+	})
+
+	// Delete the item with id = testID
+	log.Printf("Deleting item with id=%s from table %s", testID, tableName)
+	_, err = dbClient.DeleteItem(ctx, &dynamodb.DeleteItemInput{
+		TableName: &tableName,
+		Key: map[string]types.AttributeValue{
+			"id": &types.AttributeValueMemberS{Value: testID},
+		},
+	})
+	if err != nil {
+		log.Printf("Failed to delete item with id=%s: %v", testID, err)
+	}
+	log.Printf("Item with id=%s deleted successfully from table %s", testID, tableName)
+}
+
+func PostTestItem(testID string, testName string, tableName string, t *testing.T) {
+	ctx := context.Background()
+
+	// Load AWS credentials and region
+	cfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		t.Fatalf("Failed to load AWS configuration: %v", err)
+	}
+	
+	// Initialize DynamoDB client with custom endpoint
+	dbClient := dynamodb.New(dynamodb.Options{
+		Region:      "us-east-1",
+		Credentials: cfg.Credentials,
+		EndpointResolver: dynamodb.EndpointResolverFromURL("http://localhost:8080"),
+	})
+	
+	// Define the item to put with the name attribute
+	item := map[string]types.AttributeValue{
+		"id":   &types.AttributeValueMemberS{Value: testID},
+		"name": &types.AttributeValueMemberS{Value: testName},
+	}
+	
+	// Put the item into the table
+	log.Printf("Putting item with id=%s and name=%s into table %s", item["id"].(*types.AttributeValueMemberS).Value, item["name"].(*types.AttributeValueMemberS).Value, tableName)
+	_, err = dbClient.PutItem(ctx, &dynamodb.PutItemInput{
+		TableName: &tableName,
+		Item:      item,
+	})
+	if err != nil {
+		t.Fatalf("Failed to put item with id=%s: %v", item["id"].(*types.AttributeValueMemberS).Value, err)
+	}
+	log.Printf("Item with id=%s and name=%s added successfully to table %s", item["id"].(*types.AttributeValueMemberS).Value, item["name"].(*types.AttributeValueMemberS).Value, tableName)
+}
+

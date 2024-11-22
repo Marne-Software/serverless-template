@@ -2,7 +2,7 @@ const AWS = require('aws-sdk');
 const cloudformation = new AWS.CloudFormation({ region: 'us-east-1' });
 
 async function getEnvFromStack(stage) {
-  const stackName = stage === 'local'? 'serverless-template-dev' : `serverless-template-${stage}`;
+  const stackName = stage === 'local' ? 'serverless-template-dev' : `serverless-template-${stage}`;
 
   const params = {
     StackName: stackName,
@@ -47,15 +47,15 @@ async function getEnvFromStack(stage) {
     }
 
     // Return the configuration values with mapped keys
-    if (stage == 'local') {
+    if (stage === 'local') {
       return {
-        API_URL:  'http://127.0.0.1:4000/api',
+        API_URL: 'http://127.0.0.1:4000/api',
         DYNAMODB_ENDPOINT: 'http://host.docker.internal:8080',
         STAGE: stage,
         USER_POOL_ID: userPoolId,
         CLIENT_ID: userPoolClientId,
       };
-    } 
+    }
 
     return {
       API_URL: apiUrl,
@@ -64,7 +64,6 @@ async function getEnvFromStack(stage) {
       USER_POOL_ID: userPoolId,
       CLIENT_ID: userPoolClientId,
     };
-    
   } catch (error) {
     console.error("Error fetching stack outputs:", error);
     throw error;
@@ -78,11 +77,16 @@ if (require.main === module) {
     console.error("Please provide a stage argument, e.g., 'node getEnvFromStack.js dev'");
     process.exit(1);
   }
-  getEnvFromStack(stage).then(envConfig => {
-    console.log("Final environment configuration:", envConfig);
-  }).catch(error => {
-    console.error("An error occurred:", error);
-  });
+  getEnvFromStack(stage)
+    .then(envConfig => {
+      // Wrap output in "Parameters" key for SAM CLI compatibility
+      console.log(JSON.stringify({ Parameters: envConfig }, null, 2));
+    })
+    .catch(error => {
+      console.error("An error occurred:", error);
+      process.exit(1);
+    });
 }
+
 
 module.exports = getEnvFromStack;

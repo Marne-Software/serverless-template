@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/Marne-Software/serverless-template/services/helpers"
@@ -43,7 +44,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 
 	// Set up DynamoDB query input
 	input := &dynamodb.QueryInput{
-		TableName:              aws.String("serverlessTemplate-" + stage + "-somethingsTable" ),
+		TableName:              aws.String("serverlessTemplate-" + stage + "-somethingsTable"),
 		KeyConditionExpression: aws.String("id = :id"),
 		ExpressionAttributeValues: map[string]types.AttributeValue{
 			":id": &types.AttributeValueMemberS{Value: id},
@@ -53,7 +54,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 	// Execute the DynamoDB query
 	result, err := dbClient.Query(ctx, input)
 	if err != nil {
-		fmt.Printf("Failed to query items: %v\n", err)
+		log.Printf("Failed to query items: %v\n", err)
 		return events.APIGatewayProxyResponse{
 			StatusCode: 500,
 			Headers:    headers,
@@ -63,7 +64,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 
 	// Check if no items were found and return 404
 	if len(result.Items) == 0 {
-		fmt.Printf("No items found with id %s\n", id)
+		log.Printf("No items found with id %s\n", id)
 		return events.APIGatewayProxyResponse{
 			StatusCode: 404,
 			Headers:    headers,
@@ -75,7 +76,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 	var items []Something
 	err = attributevalue.UnmarshalListOfMaps(result.Items, &items)
 	if err != nil {
-		fmt.Printf("Failed to unmarshal items: %v\n", err)
+		log.Printf("Failed to unmarshal items: %v\n", err)
 		return events.APIGatewayProxyResponse{
 			StatusCode: 500,
 			Headers:    headers,
@@ -86,7 +87,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 	// Convert the unmarshaled items to JSON for the response body
 	responseJSON, err := json.Marshal(items)
 	if err != nil {
-		fmt.Printf("Failed to marshal items: %v\n", err)
+		log.Printf("Failed to marshal items: %v\n", err)
 		return events.APIGatewayProxyResponse{
 			StatusCode: 500,
 			Headers:    headers,

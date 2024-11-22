@@ -1,5 +1,5 @@
-AWSTemplateFormatVersion: '2010-09-09'
-Transform: 'AWS::Serverless-2016-10-31'
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: "AWS::Serverless-2016-10-31"
 Description: SAM Template with Go for Development and Deployment
 
 Globals:
@@ -20,7 +20,7 @@ Globals:
 Parameters:
   Stage:
     Type: String
-    Default: "local" 
+    Default: "local"
     AllowedValues:
       - dev
       - local
@@ -32,14 +32,13 @@ Parameters:
     Type: String
     Default: "serverless-template" # Put app name here in kebab case
 
-Resources: 
-
+Resources:
   InvalidatePolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       ManagedPolicyName: !Sub "${AppName}-${Stage}-InvalidatePolicy"
       PolicyDocument:
-        Version: '2012-10-17'
+        Version: "2012-10-17"
         Statement:
           - Effect: Allow
             Action:
@@ -108,7 +107,7 @@ Resources:
       ManagedPolicyArns:
         - !Ref DynamoDBPolicy
         - !Ref CloudWatchLogsPolicy
-  
+
   UserPool:
     Type: AWS::Cognito::UserPool
     Properties:
@@ -123,7 +122,7 @@ Resources:
       Policies:
         PasswordPolicy:
           MinimumLength: 6
-      AutoVerifiedAttributes: 
+      AutoVerifiedAttributes:
         - email
       EmailConfiguration:
         EmailSendingAccount: DEVELOPER
@@ -132,11 +131,11 @@ Resources:
         From: admin@marneinnovationcenter.com
       VerificationMessageTemplate:
         DefaultEmailOption: CONFIRM_WITH_LINK
-  
+
   UserPoolDomain:
     Type: AWS::Cognito::UserPoolDomain
     Properties:
-      Domain: !Sub "${AppNameDashed}-${Stage}"  # Set the domain based on the stage (local, dev, prod)
+      Domain: !Sub "${AppNameDashed}-${Stage}" # Set the domain based on the stage (local, dev, prod)
       UserPoolId: !Ref UserPool
 
   UserPoolClient:
@@ -145,7 +144,7 @@ Resources:
       ClientName: !Sub "${AppName}-${Stage}-userPoolClient"
       UserPoolId: !Ref UserPool
 
-  InvalidationFunction:
+  InvalidationFunction: #Clears s3 bucket cache for frontend deployment
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "${AppName}-${Stage}-invalidationControl"
@@ -154,14 +153,14 @@ Resources:
       Role: !GetAtt InvalidateRole.Arn
       Environment:
         Variables:
-          DISTRIBUTION_ID: !ImportValue CloudFrontDistributionId 
+          DISTRIBUTION_ID: !ImportValue CloudFrontDistributionId
       Events:
         S3Event:
           Type: S3
           Properties:
-            Bucket: !Ref FrontendBucket   
+            Bucket: !Ref FrontendBucket
             Events: s3:ObjectCreated:*
-  
+
   DefaultAuthorizerFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -288,7 +287,7 @@ Resources:
         - AttributeName: id
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
-  
+
   FrontendBucket:
     Type: AWS::S3::Bucket
     Properties:

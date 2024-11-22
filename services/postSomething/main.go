@@ -26,39 +26,88 @@ func init() {
 }
 
 func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	var req Request
 	headers := helpers.GetDefaultHeaders()
 
+	// Check if the request body is empty
+	if request.Body == "" {
+		fmt.Println("Error: Empty request body")
+		return events.APIGatewayProxyResponse{
+			StatusCode: 400,
+			Headers:    headers,
+			Body:       `{"message": "Request body cannot be empty"}`,
+		}, nil
+	}
+
+	// Unmarshal the request body into the Request struct
+	var req Request
 	if err := json.Unmarshal([]byte(request.Body), &req); err != nil {
-		fmt.Println("Error unmarshaling request body:", err)
+		fmt.Printf("Error unmarshaling request body: %v\n", err)
 		return events.APIGatewayProxyResponse{
 			StatusCode: 400,
 			Headers:    headers,
 			Body:       `{"message": "Invalid request body"}`,
-		}, err
+		}, nil
 	}
 
-	// Set a static ID if req.Id is empty
+	// Validate request fields
+	if req.Name == "" {
+		fmt.Println("Validation failed: Name field is empty")
+		return events.APIGatewayProxyResponse{
+			StatusCode: 400,
+			Headers:    headers,
+			Body:       `{"message": "Name field is required"}`,
+		}, nil
+	}
+
+	// Set a default ID if none is provided
 	if req.Id == "" {
 		req.Id = "f0c19de7-1aef-4a66-9a83-c15bd7b232e0"
 	}
 
-	fmt.Printf("Request ID: %s\n", req.Id)
-	fmt.Printf("Request Name: %s\n", req.Name)
-
 	stage := os.Getenv("STAGE")
-	fmt.Printf("Table: %s\n", "serverlessTemplate-" + stage + "-somethingsTable")
-	input := &dynamodb.PutItemInput{
-		TableName: aws.String("serverlessTemplate-" + stage + "-somethingsTable"),
+	tableName := fmt.Sprintf("serverlessTemplate-%s-somethingsTable", stage)
+	fmt.Printf("Using DynamoDB table: %s\n", tableName)
+
+	// Check if the item already exists in DynamoDB
+	getItemInput := &dynamodb.GetItemInput{
+		TableName: aws.String(tableName),
+		Key: map[string]types.AttributeValue{
+			"id": &types.AttributeValueMemberS{Value: req.Id},
+		},
+	}
+
+	result, err := dbClient.GetItem(ctx, getItemInput)
+	if err != nil {
+		fmt.Printf("Error checking item existence: %v\n", err)
+		return events.APIGatewayProxyResponse{
+			StatusCode: 500,
+			Headers:    headers,
+			Body:       `{"message": "Failed to check item existence"}`,
+		}, err
+	}
+
+	// If the item exists, return a conflict response (409)
+	if result.Item != nil {
+		fmt.Printf("Item with ID %s already exists\n", req.Id)
+		return events.APIGatewayProxyResponse{
+			StatusCode: 409,
+			Headers:    headers,
+			Body:       `{"message": "Item with the same ID already exists"}`,
+		}, nil
+	}
+
+	// Insert the item into DynamoDB
+	putItemInput := &dynamodb.PutItemInput{
+		TableName: aws.String(tableName),
 		Item: map[string]types.AttributeValue{
 			"id":   &types.AttributeValueMemberS{Value: req.Id},
 			"name": &types.AttributeValueMemberS{Value: req.Name},
 		},
 	}
 
-	_, err := dbClient.PutItem(ctx, input)
+	_, err = dbClient.PutItem(ctx, putItemInput)
 	if err != nil {
-		fmt.Printf("Raw error response: %v\n", err)
+		fmt.Printf("Error inserting item into DynamoDB: %v\n", err)
 		return events.APIGatewayProxyResponse{
 			StatusCode: 500,
 			Headers:    headers,
@@ -66,6 +115,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		}, err
 	}
 
+	fmt.Printf("Item with ID %s successfully added\n", req.Id)
 	return events.APIGatewayProxyResponse{
 		StatusCode: 200,
 		Headers:    headers,

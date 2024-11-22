@@ -23,7 +23,7 @@ The app name is dynamically amend to all the resources. Just navigate to the tem
     Default: "serverless-template" # Put app name here in kebab case
 ```
 
-Then, navigate to the makefile in the services directory and amend the app name there:
+Then, navigate to the Makefile in the root directory and amend the app name there:
 
 ```makefile
 APP_NAME_DASHED := serverless-template #use kebob case
@@ -57,6 +57,24 @@ Ensure the following tools are installed on your system before proceeding:
 3. **[SAM CLI](https://aws.amazon.com/serverless/sam/)**  
    Simplifies building and running serverless applications locally.
 
+4. **[fswatch](https://github.com/emcrisostomo/fswatch)**  
+   A file change monitor utility. Install it using the following instructions:
+
+   - **macOS**: Install via Homebrew:
+     ```bash
+     brew install fswatch
+     ```
+
+   - **Linux**: Install via your package manager:
+     ```bash
+     sudo apt-get update
+     sudo apt-get install fswatch
+     ```
+     If `fswatch` is not available in your distribution's repository, you can compile it from source. Refer to the [fswatch GitHub page](https://github.com/emcrisostomo/fswatch) for detailed instructions.
+
+   - **Windows**: Consider using a similar tool or run `fswatch` in a WSL (Windows Subsystem for Linux) environment.
+
+
 ## Developing Locally
 
 To set up and run the project locally, follow these steps:
@@ -77,33 +95,37 @@ To set up and run the project locally, follow these steps:
     ```bash
     make run-frontend
     ```
+4. (Optional) run the watch command to enable hot reloading for function containers:
+    ```bash
+    make watch
+    ```
 
-    ### Adding a Function
-    
-    1. Create a folder with the function name inside services that contained a file named main.go.
+### Adding a Function
 
-    2. Inside the main file implement your lambda code.
+1. Create a folder with the function name inside services that contained a file named main.go.
 
-    3. Add the function to the template.yml. Make sure the necessary role and policies are attached.
+2. Inside the main file implement your lambda code.
 
-        ```yaml
-        GetSomethingFunction:
-            Type: AWS::Serverless::Function
-            Properties:
-            FunctionName: !Sub "${AppName}-${Stage}-getSomethingFunction"
-            Handler: bootstrap
-            CodeUri: bin/GetSomething.zip
-            Role: !GetAtt LambdaApiExecutionRole.Arn
-            Events:
-                GetSomethingApi:
-                Type: Api
-                Properties:
-                    RestApiId: !Ref RestApi
-                    Path: /api/something/{id}
-                    Method: get
-                    Auth:
-                    Authorizer: DefaultAuthorizer
-        ```
+3. Add the function to the template.yml. Make sure the necessary role and policies are attached.
+
+```yaml
+GetSomethingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+    FunctionName: !Sub "${AppName}-${Stage}-getSomethingFunction"
+    Handler: bootstrap
+    CodeUri: bin/GetSomething.zip
+    Role: !GetAtt LambdaApiExecutionRole.Arn
+    Events:
+        GetSomethingApi:
+        Type: Api
+        Properties:
+            RestApiId: !Ref RestApi
+            Path: /api/something/{id}
+            Method: get
+            Auth:
+            Authorizer: DefaultAuthorizer
+```
     
     4. In the MakeFile add the function name to the functionNames array so that it is built before containerization and deployment:
 
@@ -117,8 +139,88 @@ To set up and run the project locally, follow these steps:
             PostSomething \
             DefaultAuthorizerFunction
         ```
+    
+    5. Write tests and update API documentation!
 
+## API Documentation
 
+### Base URL
+- **Local Development**: `http://localhost:4000/api`
+- **Production**: Replace `http://localhost:4000` with your production API endpoint.
+
+---
+
+### Endpoints
+
+#### 1. **Get Something**
+**Endpoint**: `GET /something/{id}`  
+Retrieves a specific item by its `id`.
+
+- **Path Parameters**:
+  - `id` (string): The ID of the item to retrieve.
+
+- **Response**:
+  - **200 OK**:
+    ```json
+    {
+      "id": "123",
+      "name": "Sample Item"
+    }
+    ```
+  - **404 Not Found**:
+    ```json
+    {
+      "message": "No items found with id {id}"
+    }
+    ```
+
+---
+
+#### 2. **Post Something**
+**Endpoint**: `POST /something`  
+Creates a new item.
+
+- **Request Body**:
+  ```json
+  {
+    "id": "123",
+    "name": "Sample Item"
+  }
+  ```
+
+#### 3. **Patch Something**
+**Endpoint**: `PATCH /something/{id}`  
+Updates an existing item by its `id`.
+
+- **Path Parameters**:
+  - `id` (string): The ID of the item to update.
+
+- **Request Body**:
+  ```json
+  {
+    "name": "Updated Item Name"
+  }
+
+#### 4. **Delete Something**
+**Endpoint**: `DELETE /something/{id}`  
+Deletes an item by its `id`.
+
+- **Path Parameters**:
+  - `id` (string): The ID of the item to delete.
+
+- **Response**:
+  - **200 OK**:
+    ```json
+    {
+      "message": "Item successfully deleted!"
+    }
+    ```
+  - **404 Not Found**:
+    ```json
+    {
+      "message": "No items found with id {id}"
+    }
+    ```
 
 
 

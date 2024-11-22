@@ -41,7 +41,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 
 	// Set up DynamoDB delete item input
 	input := &dynamodb.DeleteItemInput{
-		TableName: aws.String("serverlessTemplate-" + stage + "-somethingsTable" ),
+		TableName: aws.String("serverlessTemplate-" + stage + "-somethingsTable"),
 		Key: map[string]types.AttributeValue{
 			"id": &types.AttributeValueMemberS{Value: id},
 		},
@@ -50,7 +50,8 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 	// Execute the DynamoDB delete operation
 	_, err := dbClient.DeleteItem(ctx, input)
 	if err != nil {
-		fmt.Printf("Failed to delete item: %v\n", err)
+		// Log the error message for debugging
+		fmt.Printf("Error deleting item: %v\n", err)
 		return events.APIGatewayProxyResponse{
 			StatusCode: 500,
 			Headers:    headers,
